@@ -3,21 +3,22 @@ import { db } from '../db/client'
 import { predictions } from '../db/schema'
 import { eq, and } from 'drizzle-orm'
 import { requireAuth } from '../middleware/requireAuth'
+import { asyncHandler } from '../utils/asyncHandler'
 
 const router = Router()
 
 router.use(requireAuth)
 
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   const userId = (req.user as any).id
   const userPredictions = await db
     .select()
     .from(predictions)
     .where(eq(predictions.userId, userId))
   res.json(userPredictions)
-})
+}))
 
-router.post('/', async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const userId = (req.user as any).id
   const { fixtureId, homeGoals, awayGoals } = req.body
 
@@ -41,6 +42,6 @@ router.post('/', async (req, res) => {
     .values({ userId, fixtureId, homeGoals, awayGoals })
     .returning()
   res.status(201).json(created)
-})
+}))
 
 export default router
