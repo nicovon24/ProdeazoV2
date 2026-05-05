@@ -21,7 +21,23 @@ export function asNumber(value: unknown): number | null {
 
 export function normalizeStatus(value: unknown): ProviderFixtureStatus {
   const status = asString(value)?.toLowerCase() ?? 'scheduled'
-  if (['live', 'in_play', '1h', '2h', 'ht'].includes(status)) return 'live'
+  if (
+    [
+      'live',
+      'in_play',
+      '1h',
+      '2h',
+      'ht',
+      // BSD API v2
+      'inprogress',
+      '1st_half',
+      '2nd_half',
+      'halftime',
+      'extratime',
+      'penalties',
+    ].includes(status)
+  )
+    return 'live'
   if (['finished', 'ft', 'aet', 'pen'].includes(status)) return 'finished'
   if (['postponed', 'pst'].includes(status)) return 'postponed'
   if (['cancelled', 'canceled', 'cancel'].includes(status)) return 'cancelled'

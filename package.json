@@ -1,5 +1,5 @@
 {
-  "name": "prodezo-app",
+  "name": "prodeazo-app",
   "private": true,
   "scripts": {
     "dev:backend": "pnpm --filter backend dev",
