@@ -1,5 +1,6 @@
 import './env'
 import express from 'express'
+import { runScoreSync } from './jobs/score-sync'
 import session from 'express-session'
 import { RedisStore } from 'connect-redis'
 import cors from 'cors'
@@ -64,4 +65,8 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: message })
 })
 
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`))
+app.listen(PORT, () => {
+  console.log(`Backend running on port ${PORT}`)
+  void runScoreSync()
+  setInterval(() => void runScoreSync(), 60_000)
+})
