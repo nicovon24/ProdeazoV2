@@ -2,14 +2,14 @@
 
 ## Current Phase
 
-**Phase 2: Schema & Startup Integrity** — Not started
+**Phase 3: Score Sync Worker** — Not started
 
 ## Phase Status
 
 | # | Phase | Status | Started | Completed |
 |---|-------|--------|---------|-----------|
 | 1 | Security & Error Handling | ✅ Complete | 2026-05-05 | 2026-05-05 |
-| 2 | Schema & Startup Integrity | ⬜ Not started | — | — |
+| 2 | Schema & Startup Integrity | ✅ Complete | 2026-05-05 | 2026-05-05 |
 | 3 | Score Sync Worker | ⬜ Not started | — | — |
 | 4 | Auto-Scoring | ⬜ Not started | — | — |
 | 5 | Leaderboard API | ⬜ Not started | — | — |
