@@ -1,7 +1,8 @@
 import { db } from '../db/client'
-import { fixtures } from '../db/schema'
-import { eq, inArray } from 'drizzle-orm'
+import { fixtures, predictions } from '../db/schema'
+import { eq, isNull } from 'drizzle-orm'
 import { fetchScoresForDate } from '../services/bzzoiro.service'
+import { calculatePredictionPoints } from '../services/scoring'
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -87,6 +88,12 @@ export async function runScoreSync(): Promise<void> {
         `[score-sync] Updated fixture ${id}: ${dbFixture.status} → ${newStatus ?? dbFixture.status}, score ${homeScore ?? dbFixture.homeScore}-${awayScore ?? dbFixture.awayScore}`
       )
       updated++
+
+      // Auto-score predictions when fixture reaches FT for the first time
+      const transitioningToFT = newStatus === 'FT' && dbFixture.status !== 'FT'
+      if (transitioningToFT && homeScore !== null && awayScore !== null) {
+        await scorePredictions(id, homeScore, awayScore)
+      }
     }
 
     if (updated > 0) {
@@ -95,4 +102,30 @@ export async function runScoreSync(): Promise<void> {
   } catch (err) {
     console.error('[score-sync] Error during sync:', err instanceof Error ? err.message : err)
   }
+}
+
+async function scorePredictions(fixtureId: number, homeScore: number, awayScore: number): Promise<void> {
+  // Only score predictions that haven't been scored yet (idempotent)
+  const unscored = await db
+    .select()
+    .from(predictions)
+    .where(eq(predictions.fixtureId, fixtureId))
+
+  const toScore = unscored.filter((p) => p.points === null)
+  if (toScore.length === 0) return
+
+  for (const prediction of toScore) {
+    const points = calculatePredictionPoints(
+      prediction.homeGoals,
+      prediction.awayGoals,
+      homeScore,
+      awayScore
+    )
+    await db
+      .update(predictions)
+      .set({ points })
+      .where(eq(predictions.id, prediction.id))
+  }
+
+  console.log(`[score-sync] Fixture ${fixtureId} FT — ${toScore.length} prediction(s) scored`)
 }
