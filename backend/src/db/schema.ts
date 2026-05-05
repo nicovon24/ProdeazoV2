@@ -6,7 +6,7 @@ export const teams = pgTable('teams', {
   name: text('name').notNull(),
   shortName: text('short_name'),
   logoUrl: text('logo_url'),
-  group: text('group'),
+  groupLabel: text('group_label'),
 })
 
 export const players = pgTable('players', {
@@ -24,6 +24,12 @@ export const fixtures = pgTable('fixtures', {
   awayTeamId: integer('away_team_id').references(() => teams.id),
   date: timestamp('date').notNull(),
   round: text('round'),
+  /** BSD v2 `round_number` (e.g. group stage vs knockout ordering). */
+  roundNumber: integer('round_number'),
+  /** BSD v2 `group_name` e.g. "Group A". */
+  groupLabel: text('group_label'),
+  leagueId: integer('league_id'),
+  seasonId: integer('season_id'),
   status: text('status').default('NS'),
   homeScore: integer('home_score'),
   awayScore: integer('away_score'),
@@ -40,8 +46,8 @@ export const users = pgTable('users', {
 
 export const predictions = pgTable('predictions', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
-  userId: text('user_id').references(() => users.id),
-  fixtureId: integer('fixture_id').references(() => fixtures.id),
+  userId: text('user_id').notNull().references(() => users.id),
+  fixtureId: integer('fixture_id').notNull().references(() => fixtures.id),
   homeGoals: integer('home_goals').notNull(),
   awayGoals: integer('away_goals').notNull(),
   points: integer('points'),

@@ -31,7 +31,7 @@ export class ProviderHttpClient {
     if (!response.ok) {
       const hint =
         response.status === 401
-          ? 'Unauthorized provider request. Check the API token.'
+          ? 'Unauthorized (401): invalid or expired API key. Copy only the secret from https://sports.bzzoiro.com/dashboard/ (not the word Token). If you already use Token in the value, upgrade the app — it now strips a duplicate prefix. Optional: BZZOIRO_AUTH_SCHEME=Bearer. Env: BZZOIRO_API_KEY in backend/.env.local.'
           : `Provider request failed with ${response.status}.`
       throw new ProviderHttpError(hint, response.status, url)
     }
@@ -43,20 +43,39 @@ export class ProviderHttpClient {
     }
   }
 
+  /**
+   * @param usePageQuery - BSD `/events/` and `/live/` use limit-offset pagination (see docs); sending `page` can yield empty or wrong pages. Set `false` for those paths.
+   */
   async getAllPages<T = unknown>(
     path: string,
     params: Record<string, string | number | boolean | undefined> = {},
-    maxPages = 50
+    maxPagesOrOptions: number | { maxPages?: number; usePageQuery?: boolean } = 50
   ): Promise<T[]> {
+    const options =
+      typeof maxPagesOrOptions === 'number'
+        ? { maxPages: maxPagesOrOptions, usePageQuery: true }
+        : { maxPages: maxPagesOrOptions.maxPages ?? 50, usePageQuery: maxPagesOrOptions.usePageQuery ?? true }
+    const { maxPages, usePageQuery } = options
+
     const results: T[] = []
     let nextPath: string | null = path
     let page = 1
 
+    const requestParams = (
+      resolvedPath: string,
+      pageNum: number
+    ): Record<string, string | number | boolean | undefined> => {
+      if (resolvedPath !== path) {
+        return {}
+      }
+      if (usePageQuery) {
+        return { ...params, page: pageNum }
+      }
+      return { ...params }
+    }
+
     while (nextPath && page <= maxPages) {
-      const payload: JsonObject = await this.get<JsonObject>(nextPath, {
-        ...params,
-        page: nextPath === path ? page : undefined,
-      })
+      const payload: JsonObject = await this.get<JsonObject>(nextPath, requestParams(nextPath, page))
 
       const pageResults = Array.isArray(payload.results)
         ? (payload.results as T[])
@@ -67,6 +86,9 @@ export class ProviderHttpClient {
             : []
 
       results.push(...pageResults)
+
+      // Stop early on empty page — avoids an extra request when total is an exact multiple of pageSize
+      if (pageResults.length === 0) break
 
       const next: string | null = typeof payload.next === 'string' ? payload.next : null
       nextPath = next ? stripBasePath(next, this.baseUrl) : null
