@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-**Phase 5: Leaderboard API** — Not started
+**Phase 5: Leaderboard API** — Complete
 
 ## Phase Status
 
@@ -12,7 +12,7 @@
 | 2 | Schema & Startup Integrity | ✅ Complete | 2026-05-05 | 2026-05-05 |
 | 3 | Score Sync Worker | ✅ Complete | 2026-05-05 | 2026-05-05 |
 | 4 | Auto-Scoring | ✅ Complete | 2026-05-05 | 2026-05-05 |
-| 5 | Leaderboard API | ⬜ Not started | — | — |
+| 5 | Leaderboard API | ✅ Complete | 2026-05-05 | 2026-05-05 |
 
 ## Session Log
 
