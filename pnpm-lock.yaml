@@ -50,9 +50,6 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@types/connect-redis':
-        specifier: ^0.0.23
-        version: 0.0.23
       '@types/cors':
         specifier: ^2.8.19
         version: 2.8.19
@@ -1009,9 +1006,6 @@ packages:
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
 
-  '@types/connect-redis@0.0.23':
-    resolution: {integrity: sha512-+yKa9EQJ7YZIWjTKbCdXhqYSpirGf7Cc0o5QTFrkWORneFHVu3QOopRUi6E/ye41QGMom+cj1/kvWFHamHTADA==}
-
   '@types/connect@3.4.38':
     resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
 
@@ -1076,9 +1070,6 @@ packages:
 
   '@types/react@19.2.14':
     resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
-
-  '@types/redis@2.8.32':
-    resolution: {integrity: sha512-7jkMKxcGq9p242exlbsVzuJb57KqHRhNl4dHoQu2Y5v9bCAbtIXXH0R3HleSQW4CTOqpHIYUW3t6tpUj4BVQ+w==}
 
   '@types/send@1.2.1':
     resolution: {integrity: sha512-arsCikDvlU99zl1g69TcAB3mzZPpxgw0UQnaHeC1Nwb015xp8bknZv5rIfri9xTOcMuaVgvabfIRA7PSZVuZIQ==}
@@ -2903,16 +2894,6 @@ snapshots:
       '@types/connect': 3.4.38
       '@types/node': 24.12.2
 
-  '@types/connect-redis@0.0.23':
-    dependencies:
-      '@types/express': 5.0.6
-      '@types/express-session': 1.19.0
-      '@types/node': 25.6.0
-      '@types/redis': 2.8.32
-      ioredis: 5.10.1
-    transitivePeerDependencies:
-      - supports-color
-
   '@types/connect@3.4.38':
     dependencies:
       '@types/node': 24.12.2
@@ -2995,10 +2976,6 @@ snapshots:
   '@types/react@19.2.14':
     dependencies:
       csstype: 3.2.3
-
-  '@types/redis@2.8.32':
-    dependencies:
-      '@types/node': 24.12.2
 
   '@types/send@1.2.1':
     dependencies:

@@ -11,6 +11,7 @@ import authRoutes from './routes/auth.routes'
 import teamsRoutes from './routes/teams.routes'
 import fixturesRoutes from './routes/fixtures.routes'
 import predictionsRoutes from './routes/predictions.routes'
+import leaderboardRoutes from './routes/leaderboard.routes'
 
 const app = express()
 const PORT = process.env.PORT || 4000
@@ -58,6 +59,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/teams', teamsRoutes)
 app.use('/api/fixtures', fixturesRoutes)
 app.use('/api/predictions', predictionsRoutes)
+app.use('/api/leaderboard', leaderboardRoutes)
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err)
