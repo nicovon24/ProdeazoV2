@@ -38,8 +38,7 @@ Esta app va a ser construida con:
 - **Next.js + TypeScript** para frontend y estructura principal.
 - **Supabase + PostgreSQL** para auth, base de datos y backend.
 - **Tailwind + NextUI** para interfaz visual.
-- **API-Football** como fuente principal de fixtures/resultados.
-- **Bzzoiro BSD** para estadísticas enriquecidas.
+- **Bzzoiro BSD** como fuente principal de fixtures/resultados.
 
 ## Roadmap de alto nivel
 - **Fase 1 (MVP):** foco en predicciones + ranking.
