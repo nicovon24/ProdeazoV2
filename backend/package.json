@@ -24,15 +24,18 @@
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "ioredis": "^5.10.1",
+    "morgan": "^1.10.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/connect-redis": "^0.0.23",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
+    "@types/morgan": "^1.9.10",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.17",
     "@types/pg": "^8.20.0",
