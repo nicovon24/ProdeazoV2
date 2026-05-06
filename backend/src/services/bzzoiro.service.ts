@@ -1,6 +1,5 @@
 import '../env'
 import { ProviderHttpClient } from '../providers/http'
-import { getBzzoiroImageUrl } from '../providers/images'
 import { bzzoiroAuthorizationValue, normalizeBzzoiroApiKey } from '../providers/bzzoiro-token'
 
 function baseUrl(): string {
@@ -18,46 +17,6 @@ function createClient(): ProviderHttpClient {
       Accept: 'application/json',
     },
   })
-}
-
-export type BzzoiroPlayerDto = {
-  id: number
-  name: string
-  position: string | null
-  number: number | null
-  photoUrl: string | null
-}
-
-/** Squad from GET /v2/teams/{id}/squad/ (brief rows; see BSD v2 docs). */
-export async function fetchPlayersForTeam(teamId: number): Promise<BzzoiroPlayerDto[]> {
-  const payload = await createClient().get<Record<string, unknown>>(`/v2/teams/${teamId}/squad/`)
-  const rows = payload.players
-  if (!Array.isArray(rows)) return []
-  const out: BzzoiroPlayerDto[] = []
-  for (const raw of rows) {
-    if (!raw || typeof raw !== 'object') continue
-    const row = raw as Record<string, unknown>
-    const id = typeof row.id === 'number' ? row.id : null
-    const name = typeof row.name === 'string' ? row.name.trim() : ''
-    if (id === null || !name) continue
-    const rawNum = row.jersey_number ?? row.number
-    let number: number | null = null
-    if (typeof rawNum === 'number' && Number.isFinite(rawNum)) number = rawNum
-    else if (typeof rawNum === 'string' && rawNum.trim() !== '') {
-      const n = Number.parseInt(rawNum, 10)
-      if (Number.isFinite(n)) number = n
-    }
-    const pos = row.position
-    const position = typeof pos === 'string' && pos.trim() ? pos.trim() : null
-    out.push({
-      id,
-      name,
-      position,
-      number,
-      photoUrl: getBzzoiroImageUrl('player', id),
-    })
-  }
-  return out
 }
 
 export type FixtureTeamLabels = { homeTeam: string; awayTeam: string }

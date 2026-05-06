@@ -9,7 +9,7 @@ API HTTP del proyecto (Express + Drizzle + Postgres). Las rutas están bajo el p
 | Formato | JSON (`Content-Type: application/json` donde aplica). |
 | CORS | Origen permitido: `FRONTEND_URL` (default `http://localhost:5173`). Credenciales habilitadas (`credentials: true`). |
 | Sesión | Cookie de sesión tras login con Google; el cliente debe enviar cookies (`fetch(..., { credentials: 'include' })`). |
-| Datos externos | Partidos “live”, tabla y plantillas pueden proxificarse a **Bzzoiro Sports Data API v2** (ver más abajo). |
+| Datos externos | Partidos “live” y tabla pueden proxificarse a **Bzzoiro Sports Data API v2** (ver más abajo). |
 
 Variables de entorno: copiá **`backend/.env.example`** a **`backend/.env`** o **`backend/.env.local`** y completá valores.
 
@@ -70,7 +70,7 @@ Cierra sesión.
 
 ### Equipos (sin autenticación)
 
-Datos de equipos cargados en **Postgres** (p. ej. vía script de seed). Las plantillas se obtienen en vivo desde Bzzoiro.
+Datos de equipos cargados en **Postgres** (p. ej. vía script de seed).
 
 #### `GET /api/teams`
 
@@ -85,31 +85,6 @@ Lista todos los equipos persistidos.
 | `shortName` | string \| null | Nombre corto. |
 | `logoUrl` | string \| null | URL del escudo (si se guardó). |
 | `groupLabel` | string \| null | Etiqueta de grupo (opcional). |
-
-#### `GET /api/teams/:id/players`
-
-Plantilla del equipo **desde Bzzoiro** (`GET /api/v2/teams/{id}/squad/`). No lee la tabla local `players`. Respuesta cacheada en Redis si está disponible.
-
-**Parámetros de ruta**
-
-- `id` — ID numérico del equipo (&gt; 0).
-
-**Respuesta 200** — Array de objetos:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `id` | number | ID del jugador en BSD. |
-| `name` | string | Nombre. |
-| `position` | string \| null | Posición abreviada (p. ej. `M`). |
-| `number` | number \| null | Dorsal. |
-| `photoUrl` | string \| null | URL de foto BSD. |
-
-**Errores**
-
-- **400** — `id` inválido.
-- **502** — Fallo al llamar al proveedor (mensaje en `error`).
-
-**TTL de caché** — `BZZOIRO_PLAYERS_CACHE_TTL_SEC` (default **120** s).
 
 ---
 
@@ -130,13 +105,13 @@ Lista partidos persistidos en Postgres (snapshot tras seed u otro proceso).
 | `round` | string \| null | Etiqueta de fase (`round_name`, `group_name` o número en BSD). |
 | `roundNumber` | number \| null | `round_number` de BSD v2. |
 | `groupLabel` | string \| null | P. ej. `Group J` desde `group_name`. |
-| `leagueId` | number \| null | `league_id` BSD (p. ej. 27 Mundial). |
+| `leagueId` | number \| null | `mini_league_id` BSD (p. ej. 27 Mundial). |
 | `seasonId` | number \| null | `season_id` BSD del evento (grupo vs knockout puede diferir). |
 | `status` | string | P. ej. `NS`, `LIVE`, `FT`, `PST`, `CAN`. |
 | `homeScore` | number \| null | Goles local (si hay resultado). |
 | `awayScore` | number \| null | Goles visitante. |
 
-Cuando los nombres en BD siguen siendo placeholders de bracket (`W101`, `1A`, …), la API puede **superponer** `home_team` / `away_team` desde BSD v2: primero con **`BZZOIRO_LEAGUE_ID`** (`GET /v2/events/?league_id=…`, todas las temporadas del torneo); si no está definido, con **`TOURNAMENT_ID`** como `season_id`. Requiere `BZZOIRO_API_KEY`; Redis opcional para TTL.
+Cuando los nombres en BD siguen siendo placeholders de bracket (`W101`, `1A`, …), la API puede **superponer** `home_team` / `away_team` desde BSD v2: primero con **`BZZOIRO_LEAGUE_ID`** (`GET /v2/events/?mini_league_id=…`, todas las temporadas del torneo); si no está definido, con **`TOURNAMENT_ID`** como `season_id`. Requiere `BZZOIRO_API_KEY`; Redis opcional para TTL.
 
 #### `GET /api/fixtures/live`
 
@@ -182,6 +157,8 @@ Lista las predicciones del usuario actual.
 
 Crea o **actualiza** la predicción del usuario para un mismo `fixtureId`.
 
+> **Las predicciones se bloquean en cuanto el partido arranca** (cuando `status !== 'NS'`). Intentar crear o editar una predicción de un partido en curso o finalizado devuelve `409`.
+
 **Body JSON**
 
 ```json
@@ -196,6 +173,23 @@ Crea o **actualiza** la predicción del usuario para un mismo `fixtureId`.
 
 - **201** — Predicción creada (cuerpo = fila insertada).
 - **200** — Predicción actualizada si ya existía para ese usuario y fixture.
+- **404** — Fixture no encontrado.
+- **409** — Partido ya iniciado; predicción bloqueada.
+
+---
+
+## Sistema de puntuación
+
+Los puntos se calculan automáticamente cuando un partido llega a `FT`. El job `score-sync` corre cada 60 segundos y detecta la transición de estado.
+
+| Caso | Puntos |
+|------|--------|
+| Resultado exacto (ej: predijo 2-1, salió 2-1) | **5** |
+| Ganador correcto (ej: predijo 2-0, salió 3-1) | **3** |
+| Empate correcto (ej: predijo 1-1, salió 0-0) | **1** |
+| Cualquier otro caso | **0** |
+
+El scoring es **idempotente**: solo se calculan predicciones con `points IS NULL`. Una vez asignados los puntos no se recalculan, y el job cubre fixtures de días anteriores para manejar demoras en la API.
 
 ---
 
@@ -213,7 +207,7 @@ Documentación oficial: [BSD API v2](https://sports.bzzoiro.com/docs/v2/).
 
 ## Scripts útiles
 
-- **Seed de torneo** (`seed-tournament.ts`): prioridad de fixtures — rango `BZZOIRO_EVENTS_*` si definís `BZZOIRO_LEAGUE_ID` + ambas fechas; si no, `BZZOIRO_FIXTURE_SEASON_IDS` (varias temporadas BSD en un torneo, ej. grupo + knockout); si no, **`BZZOIRO_LEAGUE_ID` solo** → pagina todo `/v2/events/?league_id=` (grupos + eliminatorias; puede incluir ediciones viejas); último recurso **`TOURNAMENT_ID`** (una temporada). Detalle en `.env.example`.
+- **Seed de torneo** (`seed-tournament.ts`): prioridad de fixtures — rango `BZZOIRO_EVENTS_*` si definís `BZZOIRO_LEAGUE_ID` + ambas fechas; si no, `BZZOIRO_FIXTURE_SEASON_IDS` (varias temporadas BSD en un torneo, ej. grupo + knockout); si no, **`BZZOIRO_LEAGUE_ID` solo** → pagina todo `/v2/events/?mini_league_id=` (grupos + eliminatorias; puede incluir ediciones viejas); último recurso **`TOURNAMENT_ID`** (una temporada). Detalle en `.env.example`.
 
 ---
 
@@ -240,4 +234,4 @@ pnpm seed
 
 (o `pnpm --filter backend seed`).
 
-Antes: configurá `.env`, aplicá esquema a Postgres (`pnpm db:push` si usás Drizzle push). Redis opcional para caché de `/fixtures/live`, `/fixtures/standings` y `/teams/:id/players`.
+Antes: configurá `.env`, aplicá esquema a Postgres (`pnpm db:push` si usás Drizzle push). Redis opcional para caché de `/fixtures/live` y `/fixtures/standings`.

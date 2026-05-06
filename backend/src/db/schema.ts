@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, serial } from 'drizzle-orm/pg-core'
+import { pgTable, text, integer, timestamp, unique } from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
 
 export const teams = pgTable('teams', {
@@ -9,14 +9,26 @@ export const teams = pgTable('teams', {
   groupLabel: text('group_label'),
 })
 
-export const players = pgTable('players', {
-  id: integer('id').primaryKey(),
-  teamId: integer('team_id').references(() => teams.id),
+/** Grupos / pools privados del prode. Creados por usuarios. */
+export const miniLeagues = pgTable('mini_leagues', {
+  id: text('id').primaryKey().$defaultFn(() => createId()),
   name: text('name').notNull(),
-  position: text('position'),
-  photoUrl: text('photo_url'),
-  number: integer('number'),
+  inviteCode: text('invite_code').unique().notNull().$defaultFn(() => createId().slice(0, 8).toUpperCase()),
+  creatorId: text('creator_id').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
 })
+
+export const miniLeagueMembers = pgTable(
+  'mini_league_members',
+  {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    leagueId: text('mini_league_id').notNull().references(() => miniLeagues.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(),
+    role: text('role').notNull().default('member'), // 'owner' | 'member'
+    joinedAt: timestamp('joined_at').defaultNow(),
+  },
+  (t) => [unique().on(t.leagueId, t.userId)]
+)
 
 export const fixtures = pgTable('fixtures', {
   id: integer('id').primaryKey(),
@@ -28,6 +40,7 @@ export const fixtures = pgTable('fixtures', {
   roundNumber: integer('round_number'),
   /** BSD v2 `group_name` e.g. "Group A". */
   groupLabel: text('group_label'),
+  /** BSD / API `league_id` (competition). */
   leagueId: integer('league_id'),
   seasonId: integer('season_id'),
   status: text('status').default('NS'),
@@ -44,12 +57,16 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow(),
 })
 
-export const predictions = pgTable('predictions', {
-  id: text('id').primaryKey().$defaultFn(() => createId()),
-  userId: text('user_id').notNull().references(() => users.id),
-  fixtureId: integer('fixture_id').notNull().references(() => fixtures.id),
-  homeGoals: integer('home_goals').notNull(),
-  awayGoals: integer('away_goals').notNull(),
-  points: integer('points'),
-  createdAt: timestamp('created_at').defaultNow(),
-})
+export const predictions = pgTable(
+  'predictions',
+  {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    userId: text('user_id').notNull().references(() => users.id),
+    fixtureId: integer('fixture_id').notNull().references(() => fixtures.id),
+    homeGoals: integer('home_goals').notNull(),
+    awayGoals: integer('away_goals').notNull(),
+    points: integer('points'),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (t) => [unique().on(t.userId, t.fixtureId)]
+)

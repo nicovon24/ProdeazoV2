@@ -1,5 +1,16 @@
 type JsonObject = Record<string, unknown>
 
+function singleFetchTimeoutMs(): number {
+  const n = Number(process.env.BZZOIRO_FETCH_TIMEOUT_MS)
+  return Number.isFinite(n) && n > 0 ? n : 30_000
+}
+
+/** Max wall time for `getAllPages` when caller does not pass `signal` (avoids hanging `/api/fixtures` overlay). */
+function paginatedFetchTimeoutMs(): number {
+  const n = Number(process.env.BZZOIRO_PAGINATED_FETCH_TIMEOUT_MS)
+  return Number.isFinite(n) && n > 0 ? n : 120_000
+}
+
 export class ProviderHttpError extends Error {
   constructor(message: string, readonly status: number, readonly url: string) {
     super(message)
@@ -23,10 +34,12 @@ export class ProviderHttpClient {
 
   async get<T = unknown>(
     path: string,
-    params: Record<string, string | number | boolean | undefined> = {}
+    params: Record<string, string | number | boolean | undefined> = {},
+    init?: { signal?: AbortSignal }
   ): Promise<T> {
     const url = this.buildUrl(path, params)
-    const response = await fetch(url, { headers: this.headers })
+    const signal = init?.signal ?? AbortSignal.timeout(singleFetchTimeoutMs())
+    const response = await fetch(url, { headers: this.headers, signal })
 
     if (!response.ok) {
       const hint =
@@ -49,13 +62,20 @@ export class ProviderHttpClient {
   async getAllPages<T = unknown>(
     path: string,
     params: Record<string, string | number | boolean | undefined> = {},
-    maxPagesOrOptions: number | { maxPages?: number; usePageQuery?: boolean } = 50
+    maxPagesOrOptions:
+      | number
+      | { maxPages?: number; usePageQuery?: boolean; signal?: AbortSignal } = 50
   ): Promise<T[]> {
     const options =
       typeof maxPagesOrOptions === 'number'
-        ? { maxPages: maxPagesOrOptions, usePageQuery: true }
-        : { maxPages: maxPagesOrOptions.maxPages ?? 50, usePageQuery: maxPagesOrOptions.usePageQuery ?? true }
-    const { maxPages, usePageQuery } = options
+        ? { maxPages: maxPagesOrOptions, usePageQuery: true, signal: undefined as AbortSignal | undefined }
+        : {
+            maxPages: maxPagesOrOptions.maxPages ?? 50,
+            usePageQuery: maxPagesOrOptions.usePageQuery ?? true,
+            signal: maxPagesOrOptions.signal,
+          }
+    const { maxPages, usePageQuery, signal: callerSignal } = options
+    const listSignal = callerSignal ?? AbortSignal.timeout(paginatedFetchTimeoutMs())
 
     const results: T[] = []
     let nextPath: string | null = path
@@ -75,7 +95,11 @@ export class ProviderHttpClient {
     }
 
     while (nextPath && page <= maxPages) {
-      const payload: JsonObject = await this.get<JsonObject>(nextPath, requestParams(nextPath, page))
+      const payload: JsonObject = await this.get<JsonObject>(
+        nextPath,
+        requestParams(nextPath, page),
+        { signal: listSignal }
+      )
 
       const pageResults = Array.isArray(payload.results)
         ? (payload.results as T[])

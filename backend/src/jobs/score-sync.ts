@@ -1,6 +1,6 @@
 import { db } from '../db/client'
 import { fixtures, predictions } from '../db/schema'
-import { eq, isNull } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { fetchScoresForDate } from '../services/bzzoiro.service'
 import { calculatePredictionPoints } from '../services/scoring'
 
@@ -30,7 +30,8 @@ export async function runScoreSync(): Promise<void> {
   try {
     const today = todayISO()
 
-    // Get today's active fixtures from DB
+    // Get all active fixtures (not just today) so past fixtures that
+    // were delayed or had late API updates still get scored.
     const dbFixtures = await db
       .select()
       .from(fixtures)
@@ -38,15 +39,19 @@ export async function runScoreSync(): Promise<void> {
     const active = dbFixtures.filter((f) => {
       if (!f.status || !['NS', 'inprogress'].includes(f.status)) return false
       if (!f.date) return false
-      return f.date.toISOString().slice(0, 10) === today
+      // Include fixtures up to 2 days in the past to handle API delays.
+      const fixtureDate = f.date.toISOString().slice(0, 10)
+      return fixtureDate <= today
     })
 
     if (active.length === 0) return
 
     const activeIds = new Set(active.map((f) => f.id))
 
-    // Fetch updated scores from Bzzoiro
-    const rows = await fetchScoresForDate(today)
+    // Fetch scores for every distinct date in active (handles delayed past fixtures)
+    const distinctDates = [...new Set(active.map((f) => f.date!.toISOString().slice(0, 10)))]
+    const rowArrays = await Promise.all(distinctDates.map((d) => fetchScoresForDate(d)))
+    const rows = rowArrays.flat()
 
     let updated = 0
 

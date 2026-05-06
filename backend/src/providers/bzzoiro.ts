@@ -86,6 +86,7 @@ export function createBzzoiroProvider(options: BzzoiroProviderOptions): DataProv
         limit: Math.min(Number(params?.v2Limit) || 200, 200),
       }
       if (params?.leagueId) {
+        // v2 OpenAPI: /teams/ uses `league_id`; `in_competition` requires it (mini_league_id → 400).
         q.league_id = Number(params.leagueId)
         if (params.inCompetition === true) q.in_competition = true
       }
@@ -236,6 +237,7 @@ function normalizeFixture(value: unknown): ProviderFixture | null {
     id,
     leagueId:
       asString(row.league_id) ??
+      asString(row.mini_league_id) ??
       asString(leagueObj.id) ??
       asString(asObject(row.league_obj).id),
     seasonId:

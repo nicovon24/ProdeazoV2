@@ -1,12 +1,11 @@
 import '../env'
 import { db, pool } from '../db/client'
-import { teams, players, fixtures } from '../db/schema'
+import { teams, fixtures } from '../db/schema'
 import { createBzzoiroProvider, extractTeamsFromFixtures } from '../providers/bzzoiro'
 import { enrichFixturesTeamsFromRoster, isLikelyBracketPlaceholder } from '../providers/participant-names'
 import { dedupeTeams } from '../providers/normalize'
 import type { ProviderFixtureStatus } from '../providers/types'
 import { normalizeBzzoiroApiKey } from '../providers/bzzoiro-token'
-import { fetchPlayersForTeam } from '../services/bzzoiro.service'
 
 type SeedConfig =
   | { kind: 'season'; seasonId: string; apiKey: string }
@@ -149,7 +148,7 @@ async function seed() {
         console.warn(
           `Season id "${config.seasonId}" not in /seasons/ results${leagueFilter ? ` for league ${leagueFilter}` : ''}. ` +
             (examples ? `Sample seasons: ${examples}. ` : '') +
-            'Set TOURNAMENT_ID to the numeric `id` from https://sports.bzzoiro.com/api/seasons/ (optional: ?league=LEAGUE_ID).'
+            'Set TOURNAMENT_ID to the numeric `id` from https://sports.bzzoiro.com/api/seasons/ (optional: ?league=league_id).'
         )
       }
     } else if (config.kind === 'seasons') {
@@ -161,7 +160,7 @@ async function seed() {
     } else {
       console.warn(
         `No events for league ${config.leagueId} between ${config.dateFrom} and ${config.dateTo}. ` +
-          'Widen the date range, or confirm the league id (GET /api/leagues/). You can also switch to TOURNAMENT_ID if /api/seasons/?league=ID lists a season for this competition.'
+          'Widen the date range, or confirm BZZOIRO_LEAGUE_ID (GET /v2/leagues/). You can also switch to TOURNAMENT_ID if /api/seasons/?league=ID lists a season for this competition.'
       )
     }
   }
@@ -181,7 +180,7 @@ async function seed() {
         'Bzzoiro models undecided World Cup slots as synthetic “teams”; after the draw / when events show real nations, run seed again.'
     )
   }
-  console.log(`Seeding ${teamEntities.length} teams (and squads)…`)
+  console.log(`Seeding ${teamEntities.length} teams…`)
 
   for (const team of teamEntities) {
     const id = Number.parseInt(team.id, 10)
@@ -199,21 +198,6 @@ async function seed() {
       .onConflictDoNothing()
 
     console.log(`  ${team.name}`)
-
-    const squad = await fetchPlayersForTeam(id)
-    for (const row of squad) {
-      await db
-        .insert(players)
-        .values({
-          id: row.id,
-          teamId: id,
-          name: row.name,
-          position: row.position ?? null,
-          photoUrl: row.photoUrl ?? null,
-          number: row.number ?? null,
-        })
-        .onConflictDoNothing()
-    }
   }
 
   console.log('Seeding fixtures…')
