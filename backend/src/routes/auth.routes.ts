@@ -28,6 +28,8 @@ router.get(
   authController.oauthCallbackSuccess
 )
 
+router.post('/register', authController.register)
+router.post('/login', authController.localLogin)
 router.post('/logout', authController.logout)
 
 router.get('/me', authController.me)

@@ -31,10 +31,20 @@ if (!sessionSecret) {
   throw new Error('SESSION_SECRET is required in production')
 }
 
-const useMemorySessions = process.env.SESSION_STORE === 'memory'
+const sessionStoreEnv = process.env.SESSION_STORE?.trim().toLowerCase()
+/** En desarrollo: memoria por defecto (sin Redis). En producción: Redis salvo SESSION_STORE=memory. */
+const useMemorySessions =
+  sessionStoreEnv === 'memory' ||
+  (process.env.NODE_ENV !== 'production' && sessionStoreEnv !== 'redis')
 
 if (useMemorySessions) {
-  console.warn('[session] Using in-memory store (set SESSION_STORE=redis when Redis is available)')
+  if (process.env.NODE_ENV !== 'production' && sessionStoreEnv !== 'memory') {
+    console.warn(
+      '[session] Using in-memory store in development (set SESSION_STORE=redis + run Redis for persistent sessions)'
+    )
+  } else {
+    console.warn('[session] Using in-memory store (set SESSION_STORE=redis when Redis is available)')
+  }
 }
 
 app.use(helmet())

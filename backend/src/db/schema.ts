@@ -50,10 +50,12 @@ export const fixtures = pgTable('fixtures', {
 
 export const users = pgTable('users', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
-  googleId: text('google_id').unique().notNull(),
+  googleId: text('google_id').unique(),
   email: text('email').unique().notNull(),
   name: text('name').notNull(),
   avatar: text('avatar'),
+  passwordHash: text('password_hash'),
+  authProvider: text('auth_provider').notNull().default('google'),
   createdAt: timestamp('created_at').defaultNow(),
 })
 

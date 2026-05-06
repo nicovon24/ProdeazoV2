@@ -1,6 +1,8 @@
 import passport from 'passport'
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
 import type { Profile } from 'passport-google-oauth20'
+import { Strategy as LocalStrategy } from 'passport-local'
+import bcrypt from 'bcrypt'
 import { db } from '../db/client'
 import { users } from '../db/schema'
 import { eq } from 'drizzle-orm'
@@ -54,6 +56,21 @@ if (googleClientId && googleClientSecret) {
     )
   )
 }
+
+passport.use(
+  'local',
+  new LocalStrategy({ usernameField: 'email' }, async (email, password, done) => {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+      if (!user || !user.passwordHash) return done(null, false)
+      const match = await bcrypt.compare(password, user.passwordHash)
+      if (!match) return done(null, false)
+      done(null, user)
+    } catch (err) {
+      done(err as Error)
+    }
+  })
+)
 
 passport.serializeUser((user: any, done) => done(null, user.id))
 
