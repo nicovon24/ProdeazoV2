@@ -42,7 +42,7 @@ if (googleClientId && googleClientSecret) {
             .insert(users)
             .values({
               googleId: profile.id,
-              email: profile.emails?.[0]?.value ?? '',
+              email: profile.emails?.[0]?.value || `google_${profile.id}@noemail.invalid`,
               name: profile.displayName,
               avatar: profile.photos?.[0]?.value,
             })
