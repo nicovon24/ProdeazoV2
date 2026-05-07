@@ -76,8 +76,9 @@ export async function live(req: Request, res: Response) {
   if (cached) return res.json(paginate(cached, req))
 
   const data = await fetchLiveScores()
-  await setCache(cacheKey, data, 60)
-  res.json(paginate(Array.isArray(data) ? data : [data], req))
+  const rows = data.results
+  await setCache(cacheKey, rows, 60)
+  res.json(paginate(rows, req))
 }
 
 export async function standings(req: Request, res: Response) {
