@@ -9,7 +9,7 @@ import morgan from 'morgan'
 import helmet from 'helmet'
 // import rateLimit from 'express-rate-limit'
 import passport from './config/passport'
-import { redis } from './config/redis'
+import { redis, connectRedis } from './config/redis'
 import authRoutes from './routes/auth.routes'
 import teamsRoutes from './routes/teams.routes'
 import fixturesRoutes from './routes/fixtures.routes'
@@ -93,8 +93,15 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: { code: 'INTERNAL_ERROR', message } })
 })
 
-app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`)
-  void runScoreSync()
-  setInterval(() => void runScoreSync(), 60_000)
-})
+connectRedis()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Backend running on port ${PORT}`)
+      void runScoreSync()
+      setInterval(() => void runScoreSync(), 60_000)
+    })
+  })
+  .catch((err) => {
+    console.error('[startup] Failed to connect to Redis:', err)
+    process.exit(1)
+  })
