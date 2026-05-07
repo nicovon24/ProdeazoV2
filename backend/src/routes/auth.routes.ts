@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express'
 import { Router } from 'express'
 import passport, { isGoogleOAuthEnabled } from '../config/passport'
 import * as authController from '../controllers/auth.controller'
+import { asyncHandler } from '../utils/asyncHandler'
 
 const router = Router()
 
@@ -28,10 +29,10 @@ router.get(
   authController.oauthCallbackSuccess
 )
 
-router.post('/register', authController.register)
-router.post('/login', authController.localLogin)
-router.post('/logout', authController.logout)
+router.post('/register', asyncHandler(authController.register))
+router.post('/login', asyncHandler(authController.localLogin))
+router.post('/logout', asyncHandler(authController.logout))
 
-router.get('/me', authController.me)
+router.get('/me', asyncHandler(authController.me))
 
 export default router
