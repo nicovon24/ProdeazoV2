@@ -1,6 +1,7 @@
+import { FixtureStatus, isActiveForScoreSync, isFinishedStoredStatus, normalizeScoresRowStatus } from '../constants/fixture-status'
 import { db } from '../db/client'
 import { fixtures, predictions } from '../db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { fetchScoresForDate } from '../services/bzzoiro.service'
 import { calculatePredictionPoints } from '../services/scoring'
 
@@ -17,27 +18,27 @@ function parseScore(value: unknown): number | null {
   return null
 }
 
-function normalizeStatus(raw: unknown): string | null {
-  const s = typeof raw === 'string' ? raw.trim().toLowerCase() : null
-  if (!s) return null
-  if (['ft', 'finished', 'fulltime', 'full-time', 'aet', 'pen'].includes(s)) return 'FT'
-  if (['inprogress', 'live', 'in_play', '1h', '2h', 'ht'].includes(s)) return 'inprogress'
-  if (['ns', 'scheduled', 'notstarted', 'not_started', 'tbd'].includes(s)) return 'NS'
-  return s
-}
-
 export async function runScoreSync(): Promise<void> {
   try {
     const today = todayISO()
 
-    // Get all active fixtures (not just today) so past fixtures that
-    // were delayed or had late API updates still get scored.
+    // Fetch only non-terminal fixtures so we avoid a full-table scan on every
+    // tick. Terminal statuses (finished, postponed, cancelled) are excluded at
+    // the DB level. Legacy status aliases ('ns', 'inprogress') are included
+    // until a migration normalises all rows to canonical values.
+    const ACTIVE_STATUSES = [
+      FixtureStatus.NotStarted,
+      FixtureStatus.InProgress,
+      'ns',
+      'inprogress',
+    ]
     const dbFixtures = await db
       .select()
       .from(fixtures)
+      .where(inArray(fixtures.status, ACTIVE_STATUSES))
 
     const active = dbFixtures.filter((f) => {
-      if (!f.status || !['NS', 'inprogress'].includes(f.status)) return false
+      if (!f.status || !isActiveForScoreSync(f.status)) return false
       if (!f.date) return false
       // Include fixtures up to 2 days in the past to handle API delays.
       const fixtureDate = f.date.toISOString().slice(0, 10)
@@ -71,7 +72,7 @@ export async function runScoreSync(): Promise<void> {
       const scores = (row.scores ?? row.score) as Record<string, unknown> | null
       const homeScore = parseScore(row.home_score ?? scores?.home ?? scores?.home_score)
       const awayScore = parseScore(row.away_score ?? scores?.away ?? scores?.away_score)
-      const newStatus = normalizeStatus(row.status ?? row.status_type)
+      const newStatus = normalizeScoresRowStatus(row.status ?? row.status_type)
 
       const changed =
         homeScore !== dbFixture.homeScore ||
@@ -94,9 +95,10 @@ export async function runScoreSync(): Promise<void> {
       )
       updated++
 
-      // Auto-score predictions when fixture reaches FT for the first time
-      const transitioningToFT = newStatus === 'FT' && dbFixture.status !== 'FT'
-      if (transitioningToFT && homeScore !== null && awayScore !== null) {
+      // Auto-score predictions when fixture is finished for the first time
+      const transitioningToFinished =
+        newStatus === FixtureStatus.Finished && !isFinishedStoredStatus(dbFixture.status)
+      if (transitioningToFinished && homeScore !== null && awayScore !== null) {
         await scorePredictions(id, homeScore, awayScore)
       }
     }
@@ -132,5 +134,5 @@ async function scorePredictions(fixtureId: number, homeScore: number, awayScore:
       .where(eq(predictions.id, prediction.id))
   }
 
-  console.log(`[score-sync] Fixture ${fixtureId} FT — ${toScore.length} prediction(s) scored`)
+  console.log(`[score-sync] Fixture ${fixtureId} finished — ${toScore.length} prediction(s) scored`)
 }
