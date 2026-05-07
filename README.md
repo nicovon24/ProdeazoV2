@@ -40,6 +40,20 @@ Esta app va a ser construida con:
 - **Tailwind + NextUI** para interfaz visual.
 - **Bzzoiro BSD** como fuente principal de fixtures/resultados.
 
+## Desarrollo local
+
+Requiere [Docker Desktop](https://www.docker.com/products/docker-desktop/). No necesitás Node ni PostgreSQL instalados.
+
+```bash
+# Copiá el .env y completá SESSION_SECRET como mínimo
+cp backend/.env.example backend/.env
+
+# Build, migraciones y arranque
+docker compose up --build
+```
+
+Las migraciones corren automáticamente. El backend queda en `http://localhost:3000`.
+
 ## Roadmap de alto nivel
 - **Fase 1 (MVP):** foco en predicciones + ranking.
 - **Fase 2:** miniligas y panel administrativo.
