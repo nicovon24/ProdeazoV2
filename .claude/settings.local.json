@@ -5,7 +5,8 @@
       "Bash(pnpm approve-builds *)",
       "Bash(pnpm db:push)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(pnpm remove *)"
     ]
   }
 }
