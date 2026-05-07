@@ -4,46 +4,46 @@
 
 ### Security & Error Handling
 
-- [ ] **SEC-01** — Todos los route handlers async están wrapped con asyncHandler (no crasha el proceso ante errores de DB)
-- [ ] **SEC-02** — Existe un global error handler en Express que devuelve JSON `{error: message}` y no expone stack traces en producción
-- [ ] **SEC-03** — El endpoint POST /api/predictions valida el body con Zod (fixtureId: number, homeGoals: number 0-20, awayGoals: number 0-20) y devuelve 400 con mensaje claro si inválido
-- [ ] **SEC-04** — GET /api/auth/me solo devuelve `{id, email, name, avatar}` — nunca expone googleId ni campos internos
-- [ ] **SEC-05** — POST /api/auth/logout llama `req.session.destroy()` además de `req.logout()` para invalidar la sesión en Redis
-- [ ] **SEC-06** — La cookie de sesión tiene `sameSite: 'lax'` e `httpOnly: true`
+- [ ] **SEC-01** — All async route handlers are wrapped with `asyncHandler` (process does not crash on DB errors)
+- [ ] **SEC-02** — Global Express error handler returns JSON `{error: message}` without stack traces in production
+- [ ] **SEC-03** — `POST /api/predictions` validates body with Zod (`fixtureId: number`, `homeGoals`: 0–20, `awayGoals`: 0–20) and returns 400 with a clear message when invalid
+- [ ] **SEC-04** — `GET /api/auth/me` returns `{id, email, name, avatar}` only — never exposes `googleId` or internal fields
+- [ ] **SEC-05** — `POST /api/auth/logout` calls `req.session.destroy()` in addition to `req.logout()` to invalidate Redis/session store
+- [ ] **SEC-06** — Session cookie has `sameSite: 'lax'` and `httpOnly: true`
 
 ### DB & Startup Integrity
 
-- [ ] **DB-01** — Las columnas `userId` y `fixtureId` de la tabla `predictions` tienen constraint `NOT NULL` en el schema de Drizzle
-- [ ] **DB-02** — Al startup, la app valida que `DATABASE_URL`, `REDIS_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET` estén definidas — si falta alguna, loguea el error y hace `process.exit(1)`
+- [ ] **DB-01** — Columns `userId` and `fixtureId` on `predictions` have NOT NULL constraint in Drizzle schema
+- [ ] **DB-02** — On startup the app verifies `DATABASE_URL`, `REDIS_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET` exist — logs and `process.exit(1)` when missing
 
 ### HTTP Provider Fix
 
-- [ ] **HTTP-01** — `getAllPages` en `http.ts` no hace un request extra cuando el total de resultados es múltiplo exacto del page size (fix off-by-one en la condición de corte)
+- [ ] **HTTP-01** — `getAllPages` in `http.ts` does not issue one extra HTTP round-trip when total rows equal an exact multiple of page size (off-by-one fix in termination condition)
 
 ### Score Sync
 
-- [ ] **SYNC-01** — Un job (setInterval o node-cron) corre cada 60 segundos y llama al provider de Bzzoiro para obtener scores en vivo, actualizando `homeScore`, `awayScore` y `status` en la tabla `fixtures` de la DB para los fixtures con status `inprogress` o `NS` del día actual
-- [ ] **SYNC-02** — Cuando un fixture cambia su status a `FT` (full time), el job corre `calculatePredictionPoints()` de `scoring.ts` para cada predicción asociada a ese fixture
-- [ ] **SYNC-03** — Los puntos calculados se escriben en `predictions.points` via UPDATE en la DB
+- [ ] **SYNC-01** — A job (`setInterval` or node-cron) runs every ~60 seconds, calls Bzzoiro live scores, and updates `homeScore`, `awayScore`, `status` on `fixtures` for rows that are still `not_started` or `in_progress` within the polled date window (see implementation)
+- [ ] **SYNC-02** — When fixture status transitions to **`finished`**, invoke `calculatePredictionPoints()` from `scoring.ts` for every prediction on that fixture
+- [ ] **SYNC-03** — Persist computed totals with `UPDATE predictions.points`
 
 ### Leaderboard API
 
-- [ ] **API-01** — Existe el endpoint GET /api/leaderboard que devuelve un array de `{userId, name, avatar, totalPoints}` ordenado por `totalPoints` DESC, calculado como SUM de `predictions.points` agrupado por userId con JOIN a users
+- [ ] **API-01** — Endpoint `GET /api/leaderboard` returns `{userId, name, avatar, totalPoints}[]` ordered by `totalPoints` DESC (`SUM(predictions.points)` grouped by user with JOIN to users)
 
 ## v2 Requirements (deferred)
 
-- Notificaciones cuando un partido empieza o termina
-- Endpoint de historial de predicciones por usuario
-- Cache de leaderboard en Redis (actualmente es query directa)
-- Rate limiting en endpoints de predicciones
-- Tests automatizados (unit + integration)
+- Notifications when a match starts or ends
+- Prediction history endpoint per user
+- Leaderboard cache in Redis (currently direct DB query)
+- Rate limiting on prediction endpoints
+- Automated tests (unit + integration)
 
 ## Out of Scope
 
-- Frontend — trabaja otro dev
-- WebSockets / SSE — el frontend pollea, no necesita push del backend
+- Frontend — teammate ownership
+- WebSockets / SSE — frontend polls today
 - CI/CD pipeline
-- Múltiples torneos (solo WC 2026 por ahora)
+- Multi-tournament orchestration beyond WC 2026 for now
 
 ## Traceability
 

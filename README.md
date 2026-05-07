@@ -1,63 +1,63 @@
-# Prodeazo (Prode Mundial 2026)
+# Prodeazo (2026 World Cup pool)
 
-Esta app estará ideada para ser una plataforma de pronósticos y estadísticas de fútbol,
-comenzando por el Mundial 2026 y escalando luego a otros torneos.
+This app is intended to be a predictions and football statistics platform,
+starting with the 2026 World Cup and scaling later to other tournaments.
 
-## ¿De qué va a tratar el proyecto?
-La plataforma va a permitir:
-- Ver fixtures y resultados en tiempo real.
-- Cargar predicciones de partidos.
-- Sumar puntos por aciertos.
-- Comparar usuarios en rankings generales y por ligas.
-- Consultar estadísticas de equipos, jugadores y partidos.
+## What will the project cover?
+The platform will let users:
+- View fixtures and live results.
+- Submit match predictions.
+- Earn points for correct picks.
+- Compare users in global and league-specific rankings.
+- Look up team, player, and match statistics.
 
-## Features y módulos planeados
+## Planned features and modules
 
-### 1) Módulo core (MVP)
-- **Fixture**: listado de partidos y estados (pendiente, en vivo, finalizado).
-- **Predicciones**: carga de resultados antes del inicio del partido.
-- **Ranking general**: tabla de posiciones por puntos.
-- **Comparativa**: usuario vs usuario, partido por partido.
-- **Predicciones del torneo**: campeón/goleador y otros picks especiales.
-- **Perfil**: resumen personal (aciertos, puntos e historial).
+### 1) Core module (MVP)
+- **Fixtures**: match list with states (pending, live, finished).
+- **Predictions**: enter results before kick-off.
+- **Global ranking**: leaderboard by points.
+- **Head-to-head**: user vs user, match by match.
+- **Tournament picks**: champion, top scorer, and other specials.
+- **Profile**: personal summary (hits, points, history).
 
-### 2) Miniligas y administración (segunda etapa)
-- **Miniligas privadas/públicas** con código de invitación.
-- **Ranking por miniliga**.
-- **Panel admin** para ajustes manuales (resultados, scoring, usuarios).
+### 2) Mini leagues and admin (phase 2)
+- **Private/public mini leagues** with invite codes.
+- **Mini league leaderboard**.
+- **Admin panel** for manual adjustments (results, scoring, users).
 
-### 3) Módulo estadísticas y expansión a otros torneos (tercera etapa)
-- **Grupos y llaves** del torneo activo.
-- **Goleadores, asistidores y métricas avanzadas**.
-- **Vista de partido** con eventos y datos enriquecidos.
-- **Perfiles de equipos y jugadores**.
-- **Base reutilizable para sumar nuevos torneos** (copas y ligas internacionales).
+### 3) Statistics module & multi-tournament expansion (phase 3)
+- **Groups and brackets** for the active tournament.
+- **Top scorers, assists, and deeper metrics**.
+- **Match view** with events and enriched data.
+- **Team and player profiles**.
+- **Reusable base for adding tournaments** (cups and international leagues).
 
-## Stack (definición inicial)
-Esta app va a ser construida con:
-- **Next.js + TypeScript** para frontend y estructura principal.
-- **Supabase + PostgreSQL** para auth, base de datos y backend.
-- **Tailwind + NextUI** para interfaz visual.
-- **Bzzoiro BSD** como fuente principal de fixtures/resultados.
+## Stack (initial choice)
+Built with:
+- **Next.js + TypeScript** for the frontend and main structure.
+- **Supabase + PostgreSQL** for auth, database, and backend services.
+- **Tailwind + NextUI** for the UI layer.
+- **Bzzoiro BSD** as the primary fixtures/results source.
 
-## Desarrollo local
+## Local development
 
-Requiere [Docker Desktop](https://www.docker.com/products/docker-desktop/). No necesitás Node ni PostgreSQL instalados.
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/). You do not need Node or PostgreSQL installed locally.
 
 ```bash
-# Copiá el .env y completá SESSION_SECRET como mínimo
+# Copy .env and set SESSION_SECRET at minimum
 cp backend/.env.example backend/.env
 
-# Build, migraciones y arranque
+# Build, migrations, and start
 docker compose up --build
 ```
 
-Las migraciones corren automáticamente. El backend queda en `http://localhost:3000`.
+Migrations run automatically. The backend is available at `http://localhost:3000`.
 
-## Roadmap de alto nivel
-- **Fase 1 (MVP):** foco en predicciones + ranking.
-- **Fase 2:** miniligas y panel administrativo.
-- **Fase 3:** módulo estadístico completo y expansión multi-torneo.
+## High-level roadmap
+- **Phase 1 (MVP):** predictions + ranking.
+- **Phase 2:** mini leagues and admin.
+- **Phase 3:** full statistics module and multi-tournament growth.
 
-> Objetivo: la versión inicial estará ideada para terminarse antes del inicio del Mundial 2026,
-y luego evolucionará como producto reusable para otros torneos.
+> Goal: ship the first version before the 2026 World Cup kicks off,
+> then evolve it as a reusable product for other tournaments.

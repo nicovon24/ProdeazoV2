@@ -1,3 +1,4 @@
+import { FixtureStatus } from '../constants/fixture-status'
 import { pgTable, text, integer, timestamp, unique } from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
 
@@ -43,7 +44,7 @@ export const fixtures = pgTable('fixtures', {
   /** BSD / API `league_id` (competition). */
   leagueId: integer('league_id'),
   seasonId: integer('season_id'),
-  status: text('status').default('NS'),
+  status: text('status').default(FixtureStatus.NotStarted),
   homeScore: integer('home_score'),
   awayScore: integer('away_score'),
 })

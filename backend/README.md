@@ -1,26 +1,26 @@
 # Prodeazo — API backend
 
-API HTTP del proyecto (Express + Drizzle + Postgres). Las rutas están bajo el prefijo **`/api`**. Puerto por defecto: **`4000`** (`PORT` en `.env`).
+HTTP API for the project (Express + Drizzle + Postgres). Routes are under the **`/api`** prefix. Default port: **`4000`** (`PORT` in `.env`).
 
-## Convenciones generales
+## General conventions
 
-| Tema | Detalle |
-|------|---------|
-| Formato | JSON (`Content-Type: application/json` donde aplica). |
-| CORS | Origen permitido: `FRONTEND_URL` (default `http://localhost:5173`). Credenciales habilitadas (`credentials: true`). |
-| Sesión | Cookie `connect.sid` tras login. El cliente debe enviar `credentials: 'include'` en cada request. |
-| Seguridad | `helmet` activo en todos los endpoints. Headers: `X-Content-Type-Options`, `X-Frame-Options`, etc. |
-| Trazabilidad | Cada response incluye `X-Request-Id` (UUID). |
+| Topic | Detail |
+|------|--------|
+| Format | JSON (`Content-Type: application/json` where applicable). |
+| CORS | Allowed origin: `FRONTEND_URL` (default `http://localhost:5173`). Credentials enabled (`credentials: true`). |
+| Session | `connect.sid` cookie after login. The client must send `credentials: 'include'` on each request. |
+| Security | `helmet` on all routes. Headers: `X-Content-Type-Options`, `X-Frame-Options`, etc. |
+| Traceability | Every response includes `X-Request-Id` (UUID). |
 
-Variables de entorno: copiá **`backend/.env.example`** a **`backend/.env`** o **`backend/.env.local`** y completá valores.
+Environment: copy **`backend/.env.example`** to **`backend/.env`** or **`backend/.env.local`** and fill in values.
 
 ---
 
-## Formato de respuestas
+## Response shape
 
-### Listas (GET de colecciones)
+### Lists (GET collection endpoints)
 
-Todos los endpoints GET que devuelven listas usan el formato paginado:
+All GET endpoints that return lists use paginated format:
 
 ```json
 {
@@ -31,9 +31,9 @@ Todos los endpoints GET que devuelven listas usan el formato paginado:
 }
 ```
 
-**Sin parámetros** → devuelve todos los resultados, `next` y `previous` son `null`.
+**No query params** → returns all results; `next` and `previous` are `null`.
 
-**Con paginación** (`?page=N&limit=M`, default limit: 20):
+**With pagination** (`?page=N&limit=M`, default limit: 20):
 
 ```
 GET /api/fixtures?page=2&limit=10
@@ -48,9 +48,9 @@ GET /api/fixtures?page=2&limit=10
 }
 ```
 
-### Errores
+### Errors
 
-Todos los errores tienen el formato:
+All errors use this shape:
 
 ```json
 {
@@ -61,20 +61,20 @@ Todos los errores tienen el formato:
 }
 ```
 
-| Código | HTTP | Descripción |
-|--------|------|-------------|
-| `VALIDATION_ERROR` | 400 | Body inválido o parámetros incorrectos |
-| `UNAUTHORIZED` | 401 | No autenticado |
-| `FORBIDDEN` | 403 | Autenticado pero sin permisos |
-| `NOT_FOUND` | 404 | Recurso no encontrado |
-| `CONFLICT` | 409 | Conflicto (email duplicado, ya miembro, etc.) |
-| `INTERNAL_ERROR` | 500 | Error interno del servidor |
+| Code | HTTP | Description |
+|------|------|-------------|
+| `VALIDATION_ERROR` | 400 | Invalid body or parameters |
+| `UNAUTHORIZED` | 401 | Not authenticated |
+| `FORBIDDEN` | 403 | Authenticated but not allowed |
+| `NOT_FOUND` | 404 | Resource not found |
+| `CONFLICT` | 409 | Conflict (duplicate email, already a member, etc.) |
+| `INTERNAL_ERROR` | 500 | Internal server error |
 
 ---
 
 ## Endpoints
 
-### Salud
+### Health
 
 #### `GET /api/health`
 
@@ -84,141 +84,141 @@ Todos los errores tienen el formato:
 
 ---
 
-### Autenticación (`/api/auth`)
+### Authentication (`/api/auth`)
 
-La API soporta dos métodos de autenticación. Ambos usan el mismo sistema de sesión (cookie `connect.sid`).
+The API supports two auth methods. Both use the same session system (`connect.sid` cookie).
 
 #### Google OAuth
 
-Requiere `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y callback configurado en Google Console.
+Requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and the callback configured in Google Cloud Console.
 
 #### `GET /api/auth/google`
 
-Inicia el flujo OAuth (redirect al proveedor).
+Starts the OAuth flow (redirect to the provider).
 
-- **503** si OAuth no está configurado.
+- **503** if OAuth is not configured.
 
 #### `GET /api/auth/callback`
 
-Callback de Google (Passport redirige automáticamente).
+Google callback (Passport redirects automatically).
 
 ---
 
-#### Autenticación local (email + contraseña)
+#### Local auth (email + password)
 
 #### `POST /api/auth/register`
 
-Crea una cuenta nueva con email y contraseña.
+Creates a new account with email and password.
 
-**Body JSON**
+**JSON body**
 
 ```json
 {
-  "email": "usuario@ejemplo.com",
-  "password": "minimo8chars",
-  "name": "Nombre Apellido"
+  "email": "user@example.com",
+  "password": "min8chars",
+  "name": "First Last"
 }
 ```
 
-**Respuesta**
+**Response**
 
-- **201** — Usuario creado y sesión iniciada:
+- **201** — User created and session started:
   ```json
   { "user": { "id": "...", "email": "...", "name": "...", "avatar": null, "authProvider": "local" } }
   ```
-- **400** — `VALIDATION_ERROR` (email inválido, password < 8 chars, nombre vacío).
-- **409** — `CONFLICT` — el email ya está en uso.
+- **400** — `VALIDATION_ERROR` (invalid email, password shorter than 8 characters, empty name).
+- **409** — `CONFLICT` — email already in use.
 
 #### `POST /api/auth/login`
 
-Inicia sesión con email y contraseña.
+Signs in with email and password.
 
-**Body JSON**
+**JSON body**
 
 ```json
 {
-  "email": "usuario@ejemplo.com",
-  "password": "minimo8chars"
+  "email": "user@example.com",
+  "password": "min8chars"
 }
 ```
 
-**Respuesta**
+**Response**
 
-- **200** — Sesión iniciada:
+- **200** — Session started:
   ```json
   { "user": { "id": "...", "email": "...", "name": "...", "avatar": null, "authProvider": "local" } }
   ```
-- **401** — `UNAUTHORIZED` — credenciales incorrectas.
+- **401** — `UNAUTHORIZED` — invalid credentials.
 
 ---
 
 #### `GET /api/auth/me`
 
-Usuario de la sesión actual.
+Current session user.
 
 - **200** — `{ "user": { "id", "email", "name", "avatar", "authProvider" } }`
-- **401** — `{ "user": null }` si no hay sesión.
+- **401** — `{ "user": null }` if no session.
 
 #### `POST /api/auth/logout`
 
-Cierra sesión y destruye la cookie.
+Signs out and clears the session cookie.
 
 - **200** — `{ "ok": true }`
 
 ---
 
-### Equipos (`/api/teams`) — sin autenticación
+### Teams (`/api/teams`) — no auth
 
 #### `GET /api/teams`
 
-Lista todos los equipos. Respuesta paginada.
+Lists all teams. Paginated response.
 
-| Campo | Tipo | Descripción |
+| Field | Type | Description |
 |-------|------|-------------|
-| `id` | number | ID del equipo. |
-| `name` | string | Nombre completo. |
-| `shortName` | string \| null | Nombre corto. |
-| `logoUrl` | string \| null | URL del escudo. |
-| `groupLabel` | string \| null | Etiqueta de grupo. |
+| `id` | number | Team ID. |
+| `name` | string | Full name. |
+| `shortName` | string \| null | Short name. |
+| `logoUrl` | string \| null | Crest URL. |
+| `groupLabel` | string \| null | Group label. |
 
 ---
 
-### Partidos / fixtures (`/api/fixtures`) — sin autenticación
+### Fixtures (`/api/fixtures`) — no auth
 
 #### `GET /api/fixtures`
 
-Lista partidos persistidos en Postgres. Respuesta paginada.
+Lists matches stored in Postgres. Paginated response.
 
-| Campo | Tipo | Descripción |
+| Field | Type | Description |
 |-------|------|-------------|
-| `id` | number | ID del evento. |
-| `homeTeamId` | number \| null | FK a `teams`. |
-| `awayTeamId` | number \| null | FK a `teams`. |
-| `homeTeamName` | string \| null | Nombre del equipo local. |
-| `awayTeamName` | string \| null | Nombre del equipo visitante. |
-| `date` | string (ISO) | Horario del partido. |
-| `round` | string \| null | Etiqueta de fase. |
-| `status` | string | `NS`, `inprogress`, `FT`, etc. |
-| `homeScore` | number \| null | Goles local. |
-| `awayScore` | number \| null | Goles visitante. |
+| `id` | number | Event ID. |
+| `homeTeamId` | number \| null | FK to `teams`. |
+| `awayTeamId` | number \| null | FK to `teams`. |
+| `homeTeamName` | string \| null | Home team name. |
+| `awayTeamName` | string \| null | Away team name. |
+| `date` | string (ISO) | Kick-off time. |
+| `round` | string \| null | Phase label. |
+| `status` | string | `not_started`, `in_progress`, `finished`, etc. |
+| `homeScore` | number \| null | Home goals. |
+| `awayScore` | number \| null | Away goals. |
 
 #### `GET /api/fixtures/live`
 
-Partidos en juego desde Bzzoiro v2. Respuesta paginada. **Caché Redis 60 s.**
+Live matches from Bzzoiro v2. Paginated response. **Redis cache 60 s.**
 
 #### `GET /api/fixtures/standings`
 
-Tabla de posiciones desde Bzzoiro v2. Respuesta paginada. **Caché Redis 900 s.**
+Standings from Bzzoiro v2. Paginated response. **Redis cache 900 s.**
 
 ---
 
-### Predicciones (`/api/predictions`) — requiere sesión
+### Predictions (`/api/predictions`) — session required
 
 #### `GET /api/predictions`
 
-Lista las predicciones del usuario autenticado. Respuesta paginada.
+Lists the authenticated user’s predictions. Paginated response.
 
-| Campo | Tipo |
+| Field | Type |
 |-------|------|
 | `id` | string (cuid) |
 | `fixtureId` | number |
@@ -229,28 +229,28 @@ Lista las predicciones del usuario autenticado. Respuesta paginada.
 
 #### `POST /api/predictions`
 
-Crea o actualiza la predicción del usuario para un `fixtureId`. Implementado como upsert atómico (`ON CONFLICT DO UPDATE`) para evitar duplicados por concurrencia.
+Creates or updates the user’s prediction for a `fixtureId`. Implemented as an atomic upsert (`ON CONFLICT DO UPDATE`) to avoid duplicate rows under concurrency.
 
-> **Las predicciones se bloquean cuando el partido arranca** (`status !== 'NS'`).
+> **Predictions lock once the match has started** (`status !== 'not_started'`).
 
-**Body JSON**
+**JSON body**
 
 ```json
 { "fixtureId": 204851, "homeGoals": 2, "awayGoals": 1 }
 ```
 
-- **201** — Predicción guardada.
+- **201** — Prediction saved.
 - **400** — `VALIDATION_ERROR`.
-- **404** — `NOT_FOUND` — fixture no encontrado.
-- **409** — `CONFLICT` — partido ya iniciado.
+- **404** — `NOT_FOUND` — fixture not found.
+- **409** — `CONFLICT` — match already started.
 
 ---
 
-### Leaderboard global (`/api/leaderboard`) — requiere sesión
+### Global leaderboard (`/api/leaderboard`) — session required
 
 #### `GET /api/leaderboard`
 
-Ranking global de todos los usuarios ordenado por puntos totales. Respuesta paginada.
+Global ranking of all users by total points. Paginated response.
 
 ```json
 {
@@ -266,32 +266,32 @@ Ranking global de todos los usuarios ordenado por puntos totales. Respuesta pagi
 
 ---
 
-### Mini Ligas (`/api/mini-leagues`) — requiere sesión
+### Mini leagues (`/api/mini-leagues`) — session required
 
-Grupos privados de usuarios con leaderboard propio. Cada liga tiene un código de invitación único de 8 caracteres.
+Private user groups with their own leaderboard. Each league has a unique 8-character invite code.
 
 #### `POST /api/mini-leagues`
 
-Crea una liga. El creador queda como `owner`.
+Creates a league. The creator becomes `owner`.
 
-**Body JSON**
+**JSON body**
 
 ```json
 { "name": "Los Cracks" }
 ```
 
-- **201** — Liga creada con `id` y `inviteCode`.
+- **201** — League created with `id` and `inviteCode`.
 
 #### `GET /api/mini-leagues/mine`
 
-Lista las ligas en las que participa el usuario (como owner o member). Respuesta paginada.
+Lists leagues the user belongs to (as owner or member). Paginated response.
 
 #### `GET /api/mini-leagues/:id`
 
-Detalle de una liga con la lista de miembros.
+League detail with member list.
 
-- **403** si no sos miembro.
-- **404** si no existe.
+- **403** if you are not a member.
+- **404** if it does not exist.
 
 ```json
 {
@@ -305,31 +305,31 @@ Detalle de una liga con la lista de miembros.
 }
 ```
 
-#### `POST /api/mini-leagues/join` o `POST /api/mini-leagues/:id/join`
+#### `POST /api/mini-leagues/join` or `POST /api/mini-leagues/:id/join`
 
-Unirse a una liga con el código de invitación.
+Join a league with the invite code.
 
-**Body JSON**
+**JSON body**
 
 ```json
 { "code": "AB12CD34" }
 ```
 
-- **201** — Unido exitosamente.
-- **404** — Código inválido.
-- **409** — Ya sos miembro.
+- **201** — Joined successfully.
+- **404** — Invalid code.
+- **409** — Already a member.
 
 #### `DELETE /api/mini-leagues/:id/leave`
 
-Salir de una liga. El owner no puede salir (debe eliminar la liga).
+Leave a league. The owner cannot leave (they must delete the league).
 
 #### `DELETE /api/mini-leagues/:id/members/:userId`
 
-Expulsar a un miembro (solo el owner puede hacerlo).
+Remove a member (owner only).
 
 #### `GET /api/mini-leagues/:id/leaderboard`
 
-Ranking de los miembros de la liga. Solo accesible para miembros. Respuesta paginada con campo `rank`.
+Member ranking for the league. Members only. Paginated response with `rank`.
 
 ```json
 {
@@ -345,50 +345,50 @@ Ranking de los miembros de la liga. Solo accesible para miembros. Respuesta pagi
 
 ---
 
-## Sistema de puntuación
+## Scoring
 
-Los puntos se calculan automáticamente cuando un partido llega a `FT`. El job `score-sync` corre cada 60 s y detecta la transición.
+Points are calculated automatically when a match reaches `finished`. The `score-sync` job runs every 60 s and detects the transition.
 
-| Caso | Puntos |
+| Case | Points |
 |------|--------|
-| Resultado exacto (predijo 2-1, salió 2-1) | **5** |
-| Ganador correcto (predijo 2-0, salió 3-1) | **3** |
-| Empate correcto (predijo 1-1, salió 0-0) | **1** |
-| Cualquier otro | **0** |
+| Exact score (predicted 2-1, result 2-1) | **5** |
+| Correct winner (predicted 2-0, result 3-1) | **3** |
+| Correct draw (predicted 1-1, result 0-0) | **1** |
+| Anything else | **0** |
 
-El scoring es **idempotente**: solo se puntúan predicciones con `points IS NULL`. El job cubre fixtures de días anteriores para manejar demoras en la API externa.
+Scoring is **idempotent**: only predictions with `points IS NULL` are scored. The job includes past dates to handle delays from the external API.
 
 ---
 
-## Integración Bzzoiro (referencia rápida)
+## Bzzoiro integration (quick reference)
 
-| Uso | Endpoint BSD v2 |
+| Use | BSD v2 endpoint |
 |-----|-----------------|
-| Partidos en vivo | `GET /v2/events/?status=inprogress&limit=200` |
-| Tabla | `GET /v2/leagues/{leagueId}/standings/` |
+| Live matches | `GET /v2/events/?status=inprogress&limit=200` |
+| Standings | `GET /v2/leagues/{leagueId}/standings/` |
 
 ---
 
-## Scripts útiles
+## Useful scripts
 
-- **`pnpm seed`** — Seed de fixtures desde Bzzoiro. Prioridad: `BZZOIRO_EVENTS_*` (rango de fechas) → `BZZOIRO_FIXTURE_SEASON_IDS` → `BZZOIRO_LEAGUE_ID` solo → `TOURNAMENT_ID`. Ver `.env.example`.
-- **`pnpm db:push`** — Aplica el schema Drizzle a la base de datos.
+- **`pnpm seed`** — Seed fixtures from Bzzoiro. Priority: `BZZOIRO_EVENTS_*` (date range) → `BZZOIRO_FIXTURE_SEASON_IDS` → `BZZOIRO_LEAGUE_ID` alone → `TOURNAMENT_ID`. See `.env.example`.
+- **`pnpm db:push`** — Apply the Drizzle schema to the database.
 
 ---
 
-## Arranque local
+## Local run
 
-Desde **`backend/`**:
+From **`backend/`**:
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Desde la **raíz del monorepo**:
+From the **monorepo root**:
 
 ```bash
 pnpm dev:backend
 ```
 
-Configurar `.env`, aplicar schema (`pnpm db:push`). Redis es opcional (caché de live/standings; sessions en memoria en desarrollo).
+Configure `.env`, apply schema (`pnpm db:push`). Redis is optional (live/standings cache; sessions use memory in development).

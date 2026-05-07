@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import { z } from 'zod'
+import { predictionsOpen } from '../constants/fixture-status'
 import * as predictionModel from '../models/prediction.model'
 import * as fixtureModel from '../models/fixture.model'
 import { paginate } from '../utils/paginate'
@@ -31,7 +32,7 @@ export async function createOrUpdate(req: Request, res: Response) {
   if (!fixture) {
     return res.status(404).json(err('NOT_FOUND', 'Fixture not found'))
   }
-  if (fixture.status !== 'NS') {
+  if (!predictionsOpen(fixture.status)) {
     return res.status(409).json(err('CONFLICT', 'Predictions are locked once the match has started'))
   }
 

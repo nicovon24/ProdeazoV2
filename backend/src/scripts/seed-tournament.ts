@@ -4,6 +4,7 @@ import { teams, fixtures } from '../db/schema'
 import { createBzzoiroProvider, extractTeamsFromFixtures } from '../providers/bzzoiro'
 import { enrichFixturesTeamsFromRoster, isLikelyBracketPlaceholder } from '../providers/participant-names'
 import { dedupeTeams } from '../providers/normalize'
+import { FixtureStatus } from '../constants/fixture-status'
 import type { ProviderFixtureStatus } from '../providers/types'
 import { normalizeBzzoiroApiKey } from '../providers/bzzoiro-token'
 
@@ -57,15 +58,15 @@ function loadSeedConfig(): SeedConfig {
 function statusToDb(s: ProviderFixtureStatus): string {
   switch (s) {
     case 'live':
-      return 'LIVE'
+      return FixtureStatus.InProgress
     case 'finished':
-      return 'FT'
+      return FixtureStatus.Finished
     case 'postponed':
-      return 'PST'
+      return FixtureStatus.Postponed
     case 'cancelled':
-      return 'CAN'
+      return FixtureStatus.Cancelled
     default:
-      return 'NS'
+      return FixtureStatus.NotStarted
   }
 }
 

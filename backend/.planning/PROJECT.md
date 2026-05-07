@@ -2,16 +2,16 @@
 
 ## What This Is
 
-Backend Node.js/TypeScript para un prode del Mundial 2026. Los usuarios se logean con Google, hacen predicciones de resultados de partidos, y ganan puntos según la precisión. El backend consume la API de Bzzoiro para obtener fixtures, scores en vivo y standings.
+Node.js/TypeScript backend for a 2026 World Cup prediction pool. Users sign in with Google, submit match score predictions, and earn points based on accuracy. The backend calls Bzzoiro for fixtures, live scores, and standings.
 
 ## Context
 
-El backend tiene la infraestructura de datos funcionando (auth, DB schema, cache Redis, integración Bzzoiro), pero le faltan tres cosas clave para ser deployable:
-1. **Hardening** — handlers async sin try/catch, inputs sin validar, leaks de datos internos
-2. **Sync loop** — los scores se actualizan en Bzzoiro pero nunca se escriben en la DB
-3. **Scoring** — `calculatePredictionPoints()` existe pero nunca se llama; las predicciones no tienen puntos
+Data infrastructure is in place (auth, DB schema, Redis cache, Bzzoiro integration), but three gaps remain before it is truly deploy-ready:
+1. **Hardening** — async handlers without try/catch, unvalidated inputs, internal field leaks
+2. **Sync loop** — scores update in Bzzoiro but are not always persisted to our DB paths
+3. **Scoring** — `calculatePredictionPoints()` exists but must be wired; predictions need persisted points
 
-El frontend lo trabaja otro dev en paralelo — este plan es 100% backend.
+The frontend is handled by another developer — this plan is 100% backend.
 
 ## Stack
 
@@ -20,63 +20,63 @@ El frontend lo trabaja otro dev en paralelo — este plan es 100% backend.
 - **Cache:** Redis (ioredis)
 - **Auth:** Google OAuth via Passport.js + express-session
 - **Provider:** Bzzoiro API (fixtures, live scores, standings, rosters)
-- **Test:** ninguno todavía
+- **Tests:** none yet
 
 ## Core Value
 
-Los usuarios pueden hacer predicciones y ver cuántos puntos ganaron al terminar cada partido.
+Users can make predictions and see how many points they earned after each match.
 
 ## Requirements
 
 ### Validated (already in codebase)
 
-- ✓ Auth Google OAuth con sessions Redis
-- ✓ DB schema: users, teams, players, fixtures, predictions
+- ✓ Google OAuth with Redis-backed sessions
+- ✓ DB schema: users, teams, fixtures, predictions (and mini leagues)
 - ✓ Routes: auth, teams, fixtures (/live, /standings), predictions CRUD
-- ✓ Bzzoiro integration con cache Redis (TTLs)
-- ✓ Seed script para fixtures/teams/players
-- ✓ Scoring logic escrita (scoring.ts)
+- ✓ Bzzoiro integration with Redis caching (TTLs)
+- ✓ Seed script for fixtures / teams
+- ✓ Scoring logic implemented (`scoring.ts`)
 
 ### Active
 
-- [ ] **SEC-01** — Todos los route handlers async wrapped con try/catch o asyncHandler
-- [ ] **SEC-02** — Global error handler en Express (no exponer stack traces)
-- [ ] **SEC-03** — Zod validation en predictions POST/PUT
-- [ ] **SEC-04** — Auth /me solo devuelve {id, email, name, avatar} (no googleId)
-- [ ] **SEC-05** — Logout destruye la sesión (session.destroy, no solo req.logout)
-- [ ] **SEC-06** — Cookie con sameSite: 'lax' y httpOnly: true
-- [ ] **DB-01** — notNull en userId y fixtureId de la tabla predictions
-- [ ] **DB-02** — Validar DATABASE_URL y variables críticas al startup
-- [ ] **HTTP-01** — Fix off-by-one en getAllPages (http.ts) para fetches de N páginas exactas
-- [ ] **SYNC-01** — Job que actualiza homeScore/awayScore/status en fixtures cada ~60s desde Bzzoiro
-- [ ] **SYNC-02** — Cuando un fixture pasa a FT, correr calculatePredictionPoints para todas sus predicciones
-- [ ] **SYNC-03** — UPDATE predictions.points en DB con el resultado del scoring
-- [ ] **API-01** — GET /api/leaderboard — ranking de usuarios por puntos totales
+- [ ] **SEC-01** — All async route handlers wrapped with try/catch or `asyncHandler`
+- [ ] **SEC-02** — Global Express error handler (no stack traces leaked)
+- [ ] **SEC-03** — Zod validation on predictions POST/PUT
+- [ ] **SEC-04** — Auth `/me` returns `{id, email, name, avatar}` only (no `googleId`)
+- [ ] **SEC-05** — Logout destroys the session (`session.destroy`, not only `req.logout`)
+- [ ] **SEC-06** — Cookie with `sameSite: 'lax'` and `httpOnly: true`
+- [ ] **DB-01** — `notNull` on `predictions.userId` and `predictions.fixtureId`
+- [ ] **DB-02** — Validate `DATABASE_URL` and critical env vars at startup
+- [ ] **HTTP-01** — Fix `getAllPages` off-by-one (`http.ts`) for exact multiples of page size
+- [ ] **SYNC-01** — Job updates `homeScore`/`awayScore`/`status` on fixtures every ~60s from Bzzoiro
+- [ ] **SYNC-02** — When a fixture reaches `finished`, run `calculatePredictionPoints` for all related predictions
+- [ ] **SYNC-03** — Persist scoring results via `UPDATE predictions.points`
+- [ ] **API-01** — `GET /api/leaderboard` — users ranked by total points
 
 ### Out of Scope
 
-- Frontend — lo trabaja el compañero
-- WebSockets / SSE — el frontend pollea; el backend no necesita push
-- Tests automatizados en esta milestone — el foco es estabilidad funcional
-- CI/CD — fuera de scope por ahora
+- Frontend — teammate’s scope
+- WebSockets / SSE — frontend polls; backend push not required here
+- Automated tests in this milestone — focus on functional stability first
+- CI/CD — out of scope for now
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| setInterval en index.ts para el sync job | Más simple, no requiere dependencias extra. El WC 2026 tiene tráfico predecible y baja concurrencia | Pending |
-| Zod solo en boundaries (predictions) | Inputs de auth los maneja Passport; fixtures/teams son read-only del provider | Pending |
-| asyncHandler wrapper en lugar de try/catch por handler | DRY, un lugar para cambiar el error handling | Pending |
+| `setInterval` in `index.ts` for sync job | Simpler, no extra scheduler dependency. Predictable WC traffic, low concurrency | Pending |
+| Zod only at boundaries (predictions) | Auth inputs handled by Passport; fixtures/teams are provider read-mostly | Pending |
+| `asyncHandler` wrapper instead of try/catch per handler | DRY; single place to adjust error handling | Pending |
 
 ## Evolution
 
-Este documento evoluciona en cada transición de fase y milestone.
+This document updates at each phase and milestone boundary.
 
-**Después de cada fase:**
-1. ¿Algún requirement invalidado? → Mover a Out of Scope con razón
-2. ¿Requirements validados? → Mover a Validated con referencia de fase
-3. ¿Emergieron nuevos requirements? → Agregar a Active
-4. ¿Decisiones para loguear? → Agregar a Key Decisions
+**After each phase:**
+1. Any invalidated requirement? → Move to Out of Scope with rationale
+2. Any validated requirement? → Move to Validated with phase reference
+3. New requirements? → Add under Active
+4. Decisions worth logging? → Add to Key Decisions
 
 ---
-*Last updated: 2026-05-04 — inicialización del proyecto*
+*Last updated: 2026-05-04 — project initialization*

@@ -1,10 +1,10 @@
-# Prodeazo — Base de datos
+# Prodeazo — Database
 
-Postgres gestionado con **Drizzle ORM**. Schema en `src/db/schema.ts`. Para aplicar cambios: `pnpm db:push`.
+PostgreSQL managed with **Drizzle ORM**. Schema lives in `src/db/schema.ts`. To apply schema changes: `pnpm db:push`.
 
 ---
 
-## Diagrama de relaciones
+## Relationship diagram
 
 ```
 teams ──────────────────────────────────────────┐
@@ -24,135 +24,146 @@ mini_leagues >┘ (mini_league_id)  [cascade delete]
 
 ---
 
-## Tablas
+## Tables
 
 ### `teams`
 
-Equipos del torneo. Cargados vía script de seed desde Bzzoiro.
+Tournament teams. Loaded via seed script from Bzzoiro.
 
-| Columna | Tipo | Constraints | Descripción |
+| Column | Type | Constraints | Description |
 |---------|------|-------------|-------------|
-| `id` | integer | PK | ID del equipo en Bzzoiro API. |
-| `name` | text | NOT NULL | Nombre completo. |
-| `short_name` | text | | Nombre abreviado. |
-| `logo_url` | text | | URL del escudo. |
-| `group_label` | text | | Etiqueta de grupo (ej: `Group A`). |
+| `id` | integer | PK | Team ID in Bzzoiro API. |
+| `name` | text | NOT NULL | Full name. |
+| `short_name` | text | | Short name. |
+| `logo_url` | text | | Crest URL. |
+| `group_label` | text | | Group label (e.g. `Group A`). |
 
 ---
 
 ### `fixtures`
 
-Partidos del torneo. Cargados vía seed; el job `score-sync` actualiza `status`, `home_score` y `away_score` en tiempo real.
+Tournament matches. Loaded via seed; the `score-sync` job updates `status`, `home_score`, and `away_score` in near real time.
 
-| Columna | Tipo | Constraints | Descripción |
+| Column | Type | Constraints | Description |
 |---------|------|-------------|-------------|
-| `id` | integer | PK | ID del evento en Bzzoiro API. |
-| `home_team_id` | integer | FK → `teams.id` | Equipo local. |
-| `away_team_id` | integer | FK → `teams.id` | Equipo visitante. |
-| `date` | timestamp | NOT NULL | Fecha y hora del partido (UTC). |
-| `round` | text | | Etiqueta de fase/ronda. |
-| `round_number` | integer | | Número de ronda (para ordering). |
-| `group_label` | text | | Grupo (ej: `Group J`). |
-| `league_id` | integer | | ID de competición en Bzzoiro. |
-| `season_id` | integer | | ID de temporada en Bzzoiro. |
-| `status` | text | DEFAULT `'NS'` | Estado: `NS`, `inprogress`, `FT`, `PST`, `CAN`. |
-| `home_score` | integer | | Goles local (null hasta que empieza). |
-| `away_score` | integer | | Goles visitante. |
+| `id` | integer | PK | Event ID in Bzzoiro API. |
+| `home_team_id` | integer | FK → `teams.id` | Home team. |
+| `away_team_id` | integer | FK → `teams.id` | Away team. |
+| `date` | timestamp | NOT NULL | Match kick-off (UTC). |
+| `round` | text | | Phase / round label. |
+| `round_number` | integer | | Round number (for ordering). |
+| `group_label` | text | | Group (e.g. `Group J`). |
+| `league_id` | integer | | Competition ID in Bzzoiro. |
+| `season_id` | integer | | Season ID in Bzzoiro. |
+| `status` | text | DEFAULT `'not_started'` | Status: `not_started`, `in_progress`, `finished`, `postponed`, `cancelled`. |
+| `home_score` | integer | | Home goals (null until underway). |
+| `away_score` | integer | | Away goals. |
 
-**Estados de `status`:**
+**`status` values:**
 
-| Valor | Significado |
-|-------|-------------|
-| `NS` | No empezado (predicciones abiertas) |
-| `inprogress` | En curso (predicciones bloqueadas) |
-| `FT` | Finalizado (puntos calculados) |
-| `PST` | Postergado |
-| `CAN` | Cancelado |
+| Value | Meaning |
+|-------|---------|
+| `not_started` | Not started (predictions open) |
+| `in_progress` | In progress (predictions locked) |
+| `finished` | Finished (points calculated) |
+| `postponed` | Postponed |
+| `cancelled` | Cancelled |
+
+If the database already had legacy values (`NS`, `FT`, `inprogress`, …), run once:
+
+```sql
+UPDATE fixtures SET status = 'not_started' WHERE lower(trim(status)) = 'ns';
+UPDATE fixtures SET status = 'in_progress' WHERE lower(trim(status)) IN ('inprogress', 'live');
+UPDATE fixtures SET status = 'finished' WHERE lower(trim(status)) = 'ft';
+UPDATE fixtures SET status = 'postponed' WHERE lower(trim(status)) = 'pst';
+UPDATE fixtures SET status = 'cancelled' WHERE lower(trim(status)) = 'can';
+ALTER TABLE fixtures ALTER COLUMN status SET DEFAULT 'not_started';
+```
 
 ---
 
 ### `users`
 
-Usuarios registrados. Soporta autenticación con Google OAuth y con email+contraseña local.
+Registered users. Supports Google OAuth and local email + password authentication.
 
-| Columna | Tipo | Constraints | Descripción |
+| Column | Type | Constraints | Description |
 |---------|------|-------------|-------------|
-| `id` | text (cuid2) | PK | ID interno generado con CUID2. |
-| `google_id` | text | UNIQUE, nullable | ID de perfil de Google. Null para usuarios locales. |
-| `email` | text | UNIQUE, NOT NULL | Email del usuario. |
-| `name` | text | NOT NULL | Nombre para mostrar. |
-| `avatar` | text | | URL de foto de perfil (Google). |
-| `password_hash` | text | nullable | Hash bcrypt de la contraseña. Null para usuarios Google. |
-| `auth_provider` | text | NOT NULL, DEFAULT `'google'` | Método de registro: `'google'` \| `'local'`. |
-| `created_at` | timestamp | DEFAULT NOW() | Fecha de creación. |
+| `id` | text (cuid2) | PK | Internal ID (CUID2). |
+| `google_id` | text | UNIQUE, nullable | Google profile ID. Null for local users. |
+| `email` | text | UNIQUE, NOT NULL | User email. |
+| `name` | text | NOT NULL | Display name. |
+| `avatar` | text | | Profile photo URL (Google). |
+| `password_hash` | text | nullable | bcrypt hash. Null for Google users. |
+| `auth_provider` | text | NOT NULL, DEFAULT `'google'` | Sign-up method: `'google'` \| `'local'`. |
+| `created_at` | timestamp | DEFAULT NOW() | Created at. |
 
 ---
 
 ### `predictions`
 
-Predicciones de cada usuario para cada partido. Una predicción por par `(user_id, fixture_id)`.
+Each user’s prediction per match. One prediction per `(user_id, fixture_id)` pair.
 
-| Columna | Tipo | Constraints | Descripción |
+| Column | Type | Constraints | Description |
 |---------|------|-------------|-------------|
-| `id` | text (cuid2) | PK | ID interno. |
-| `user_id` | text | NOT NULL, FK → `users.id` | Usuario que hizo la predicción. |
-| `fixture_id` | integer | NOT NULL, FK → `fixtures.id` | Partido predicho. |
-| `home_goals` | integer | NOT NULL | Goles predichos para el local. |
-| `away_goals` | integer | NOT NULL | Goles predichos para el visitante. |
-| `points` | integer | nullable | Puntos obtenidos. Null hasta que el partido termina (`FT`). |
-| `created_at` | timestamp | DEFAULT NOW() | Fecha de creación. |
+| `id` | text (cuid2) | PK | Internal ID. |
+| `user_id` | text | NOT NULL, FK → `users.id` | User who predicted. |
+| `fixture_id` | integer | NOT NULL, FK → `fixtures.id` | Predicted match. |
+| `home_goals` | integer | NOT NULL | Predicted home goals. |
+| `away_goals` | integer | NOT NULL | Predicted away goals. |
+| `points` | integer | nullable | Earned points. Null until the match finishes (`finished`). |
+| `created_at` | timestamp | DEFAULT NOW() | Created at. |
 
 **Constraints:**
-- `UNIQUE (user_id, fixture_id)` — un usuario solo puede tener una predicción por partido.
+- `UNIQUE (user_id, fixture_id)` — at most one prediction per user per match.
 
-**Lógica de puntos** (calculada por `score-sync` al llegar a `FT`):
+**Point rules** (computed by `score-sync` when status becomes `finished`):
 
-| Caso | Puntos |
+| Case | Points |
 |------|--------|
-| Resultado exacto | 5 |
-| Ganador/empate correcto | 3 (ganador) / 1 (empate) |
-| Incorrecto | 0 |
+| Exact score | 5 |
+| Correct winner / draw | 3 (winner) / 1 (draw) |
+| Wrong | 0 |
 
 ---
 
 ### `mini_leagues`
 
-Grupos privados de usuarios con leaderboard propio.
+Private user groups with their own leaderboard.
 
-| Columna | Tipo | Constraints | Descripción |
+| Column | Type | Constraints | Description |
 |---------|------|-------------|-------------|
-| `id` | text (cuid2) | PK | ID interno. |
-| `name` | text | NOT NULL | Nombre de la liga (máx. 50 chars). |
-| `invite_code` | text | UNIQUE, NOT NULL | Código de invitación de 8 caracteres (ej: `AB12CD34`). Auto-generado. |
-| `creator_id` | text | NOT NULL | ID del usuario creador. |
-| `created_at` | timestamp | DEFAULT NOW() | Fecha de creación. |
+| `id` | text (cuid2) | PK | Internal ID. |
+| `name` | text | NOT NULL | League name (max 50 chars). |
+| `invite_code` | text | UNIQUE, NOT NULL | 8-character invite code (e.g. `AB12CD34`). Auto-generated. |
+| `creator_id` | text | NOT NULL | Creator user ID. |
+| `created_at` | timestamp | DEFAULT NOW() | Created at. |
 
 ---
 
 ### `mini_league_members`
 
-Relación N:M entre usuarios y mini ligas.
+Many-to-many between users and mini leagues.
 
-| Columna | Tipo | Constraints | Descripción |
+| Column | Type | Constraints | Description |
 |---------|------|-------------|-------------|
-| `id` | text (cuid2) | PK | ID interno. |
-| `mini_league_id` | text | NOT NULL, FK → `mini_leagues.id` ON DELETE CASCADE | Liga. |
-| `user_id` | text | NOT NULL | Usuario miembro. |
-| `role` | text | NOT NULL, DEFAULT `'member'` | Rol: `'owner'` \| `'member'`. |
-| `joined_at` | timestamp | DEFAULT NOW() | Fecha en que se unió. |
+| `id` | text (cuid2) | PK | Internal ID. |
+| `mini_league_id` | text | NOT NULL, FK → `mini_leagues.id` ON DELETE CASCADE | League. |
+| `user_id` | text | NOT NULL | Member user. |
+| `role` | text | NOT NULL, DEFAULT `'member'` | `'owner'` \| `'member'`. |
+| `joined_at` | timestamp | DEFAULT NOW() | Joined at. |
 
 **Constraints:**
-- `UNIQUE (mini_league_id, user_id)` — un usuario no puede estar dos veces en la misma liga.
-- `ON DELETE CASCADE` — si se elimina la liga, se eliminan todos los miembros.
+- `UNIQUE (mini_league_id, user_id)` — a user cannot join the same league twice.
+- `ON DELETE CASCADE` — deleting the league deletes all memberships.
 
 ---
 
-## Comandos útiles
+## Useful commands
 
 ```bash
-# Aplicar schema a la DB
+# Apply schema to DB
 pnpm db:push
 
-# Abrir Drizzle Studio (explorador visual de la BD)
+# Drizzle Studio (visual DB explorer)
 pnpm db:studio
 ```

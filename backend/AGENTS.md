@@ -1,95 +1,95 @@
 # PRODEAZO FIFA 2026 — Backend (AGENTS)
 
-Guía para trabajar **solo** en este paquete: API Express, datos y jobs. El cliente web u otras apps consumen esta API; no van descritas acá.
+Guide for working **only** in this package: Express API, persistence, and jobs. Web clients and other apps consume this API; they are not described here.
 
-## Dominio (contexto mínimo)
+## Domain (minimal context)
 
-App de pronósticos (prode) para el Mundial 2026. Los usuarios cargan resultados antes de cada partido y suman puntos según precisión. Hay mini-ligas privadas (grupos) con códigos de invitación.
+Prediction pool (“prode”) app for the 2026 World Cup. Users submit scorelines before each match and earn points by accuracy. There are private mini leagues (groups) with invite codes.
 
-## Estructura de carpetas (`backend/`)
+## Folder layout (`backend/`)
 
 ```
 src/
-├── controllers/   # Handlers HTTP (delgados; delegan en models/services)
-├── models/        # Consultas Drizzle
-├── services/      # Reglas de negocio, caché, APIs externas
-├── providers/     # Abstracción de proveedor de datos (Bzzoiro / API-Football)
-├── routes/        # Routers Express
-├── middleware/    # requireAuth, errores, etc.
-├── db/            # Cliente Drizzle + schema
-├── config/        # Passport, Redis, sesión
-├── jobs/          # Job recurrente de sincronización de puntajes
-└── scripts/       # Seeds y utilidades CLI
-drizzle/           # Migraciones generadas + meta
+├── controllers/   # Thin HTTP handlers; delegate to models/services
+├── models/        # Drizzle queries
+├── services/      # Business rules, cache, external APIs
+├── providers/     # Data provider abstraction (Bzzoiro / API-Football)
+├── routes/        # Express routers
+├── middleware/    # requireAuth, errors, etc.
+├── db/            # Drizzle client + schema
+├── config/        # Passport, Redis, session
+├── jobs/          # Recurring score sync job
+└── scripts/       # Seeds and CLI helpers
+drizzle/           # Generated migrations + meta
 ```
 
 ## Stack
 
-- **Runtime**: Node.js, Express 5, TypeScript estricto (`tsx` en dev)
-- **ORM**: Drizzle + `drizzle-kit` — schema en `src/db/schema.ts`
+- **Runtime**: Node.js, Express 5, strict TypeScript (`tsx` in dev)
+- **ORM**: Drizzle + `drizzle-kit` — schema in `src/db/schema.ts`
 - **DB**: PostgreSQL (`pg`)
-- **Caché / sesiones**: Redis (`ioredis`, `connect-redis`)
+- **Cache / sessions**: Redis (`ioredis`, `connect-redis`)
 - **Auth**: Passport (Google OAuth 2.0 + local)
-- **Validación**: Zod v4
-- **Paquetes**: este directorio declara `packageManager` pnpm; los scripts también funcionan con `npm run` desde `backend/`
+- **Validation**: Zod v4
+- **Packages**: this folder declares `packageManager` pnpm; scripts also work with `npm run` from `backend/`
 
-## Proveedores de datos
+## Data providers
 
-El fixture real viene de una capa de proveedor, no de lógica suelta en controllers:
+Real fixtures flow through the provider layer, not ad hoc logic in controllers:
 
-- `src/providers/` — adaptador, HTTP, refresh de tokens
-- `src/services/bzzoiro.service.ts` — integración Bzzoiro BSD (torneo de prueba)
-- Conmutar proveedor solo vía `DATA_PROVIDER` y la capa de providers, **sin** condicionales dispersos en controllers o models
-- API-Football es el respaldo documentado / fuente esperada para el WC
+- `src/providers/` — adapter, HTTP, token refresh
+- `src/services/bzzoiro.service.ts` — Bzzoiro BSD integration (tournament/testing)
+- Switch providers only via `DATA_PROVIDER` and the providers layer, **without** scattering conditionals across controllers or models
+- API-Football is the documented fallback / expected WC source
 
-## Esquema (`src/db/schema.ts`)
+## Schema (`src/db/schema.ts`)
 
-Tablas principales: `teams`, `fixtures`, `predictions`, `users`, `mini_leagues`, `mini_league_members`
+Main tables: `teams`, `fixtures`, `predictions`, `users`, `mini_leagues`, `mini_league_members`
 
-Invariants útiles:
+Useful invariants:
 
-- `(user_id, fixture_id)` único en `predictions` — un pronóstico por usuario y partido
-- `(mini_league_id, user_id)` único en `mini_league_members`
-- IDs con CUID2 (`@paralleldrive/cuid2`), salvo `teams.id` y `fixtures.id` que siguen IDs enteros del upstream
+- `(user_id, fixture_id)` unique on `predictions` — one prediction per user per match
+- `(mini_league_id, user_id)` unique on `mini_league_members`
+- CUID2 (`@paralleldrive/cuid2`) IDs except `teams.id` and `fixtures.id`, which follow upstream integers
 
-## Puntajes
+## Scoring
 
-- Lógica en `src/services/scoring.ts` — funciones puras, sin acceso a DB dentro del cálculo
-- Job de sincronización: `src/jobs/score-sync.ts`
+- Logic in `src/services/scoring.ts` — pure functions, no DB access inside the calculator
+- Sync job: `src/jobs/score-sync.ts`
 
-## Reglas de implementación (API)
+## Implementation rules (API)
 
-- Cada ruta nueva: validación Zod, `requireAuth` donde corresponda, y `asyncHandler` en handlers async (Express 5 maneja rechazos distinto a v4)
-- Invalidación de caché (fixtures, leaderboard) centralizada en `CacheService` — no llamar Redis directamente desde controllers
-- Sin segundo servidor/API paralelo salvo decisión explícita de arquitectura
-- URLs, tokens y secretos desde `src/env.ts`, no hardcodeados
+- New routes: Zod validation, `requireAuth` where needed, and `asyncHandler` on async handlers (Express 5 handles rejections differently from v4)
+- Cache invalidation (fixtures, leaderboard) lives in `CacheService` — do not call Redis directly from controllers
+- No second parallel server/API unless architecture explicitly decides it
+- URLs, tokens, and secrets come from `src/env.ts`, not hardcoded literals
 
-## Comandos (desde `backend/`)
+## Commands (from `backend/`)
 
 ```bash
-pnpm dev          # o: npm run dev
-pnpm db:push      # aplicar schema a la DB
+pnpm dev          # or: npm run dev
+pnpm db:push      # apply schema to DB
 pnpm db:studio    # Drizzle Studio
-pnpm seed         # datos de torneo de prueba
-pnpm build && pnpm start   # producción local
+pnpm seed         # tournament test data
+pnpm build && pnpm start   # local production-like run
 ```
 
-## Convenciones de archivos
+## File conventions
 
-- **Controllers**: req/res, Zod, llaman model o service, responden JSON
-- **Models**: solo Drizzle, sin reglas de negocio
-- **Services**: negocio + HTTP externos; pueden usar models
-- **Routes**: montan controllers y middleware, sin lógica
-- **Utilidades**: `asyncHandler`, `apiError`, `paginate`, etc. según el código existente
+- **Controllers**: req/res, Zod, call model or service, return JSON
+- **Models**: Drizzle only, no business rules
+- **Services**: business + external HTTP; may use models
+- **Routes**: wire controllers + middleware, no logic
+- **Utilities**: `asyncHandler`, `apiError`, `paginate`, etc. as in existing code
 
-## Evitar
+## Avoid
 
-- Importar Drizzle o `pg` en controllers — usar models
-- Calcular puntos fuera de `scoring.ts`
-- Commitear `.env` o secretos de sesión
+- Importing Drizzle or `pg` in controllers — use models
+- Computing points outside `scoring.ts`
+- Committing `.env` or session secrets
 
-## Referencias en el repo
+## Repo references
 
-- Roadmap / planificación: `.planning/ROADMAP.md`, `.planning/PROJECT.md`
+- Roadmap / planning: `.planning/ROADMAP.md`, `.planning/PROJECT.md`
 - Schema: `src/db/schema.ts`
-- Migraciones: `drizzle/`
+- Migrations: `drizzle/`
