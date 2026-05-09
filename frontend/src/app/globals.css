@@ -2,6 +2,9 @@
 @import "@heroui/styles";
 
 @theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-montserrat), sans-serif;
+
   --color-primary: #AFE805;
   --color-secondary: #033F2D;
   --color-tertiary-blue: #001AAC;

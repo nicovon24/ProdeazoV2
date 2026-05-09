@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { apiFetch } from '../api/client'
+import { apiFetch, type PaginatedResponse } from '../api/client'
 
 export interface Prediction {
   id: string
@@ -23,8 +23,8 @@ export const usePredictionsStore = create<PredictionsState>((set, get) => ({
   fetchPredictions: async () => {
     set({ loading: true })
     try {
-      const data = await apiFetch<Prediction[]>('/api/predictions')
-      set({ predictions: data })
+      const data = await apiFetch<PaginatedResponse<Prediction>>('/api/predictions')
+      set({ predictions: data.results })
     } finally {
       set({ loading: false })
     }

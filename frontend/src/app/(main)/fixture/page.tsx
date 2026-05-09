@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react'
+import { apiFetch, type PaginatedResponse } from '../../../api/client'
 
 interface Fixture {
   id: number
@@ -9,8 +10,10 @@ interface Fixture {
   status: string | null
   homeScore: number | null
   awayScore: number | null
-  homeTeamId: number
-  awayTeamId: number
+  homeTeamId: number | null
+  awayTeamId: number | null
+  homeTeamName: string | null
+  awayTeamName: string | null
 }
 
 export default function Fixtures() {
@@ -18,12 +21,8 @@ export default function Fixtures() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Note: Replaced temporary fetch relative to origin
-    fetch('/api/fixtures')
-      .then(res => res.json())
-      .then(data => {
-         if (Array.isArray(data)) setFixtures(data)
-      })
+    apiFetch<PaginatedResponse<Fixture>>('/api/fixtures')
+      .then(data => setFixtures(data.results))
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])

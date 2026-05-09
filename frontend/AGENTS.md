@@ -27,7 +27,7 @@ The current product direction is:
 | Charts     | `recharts`                               | ^3.8.1                 |
 | Validation | `zod`                                    | ^4.4.3                 |
 | Icons      | `lucide-react`                           | ^1.14.0                |
-| Auth       | `@supabase/ssr`, `@supabase/supabase-js` | latest                 |
+| API/Auth   | HTTP API client + cookie session         | Express backend        |
 
 Also present in the app:
 
@@ -49,7 +49,9 @@ Also present in the app:
 - State: use Zustand for app-level client state when shared state is genuinely needed.
 - Server/cache/data fetching: prefer React Query for browser data workflows.
 - Validation: use Zod for input and payload schemas.
-- Auth/backend integration: Supabase clients are installed and should remain the auth/data integration path.
+- Auth/backend integration: use the Express backend documented in `.planning/backend-context/`.
+- Sessions are cookie-based (`connect.sid`), so browser requests must include credentials.
+- API responses for collection GET endpoints use `{ count, next, previous, results }`.
 
 ## Scripts
 
@@ -88,6 +90,19 @@ This project already has custom theme colors defined in Tailwind/global CSS and 
 | `--color-tertiary-blue` | `#001AAC` | strong blue accent |
 | `--color-tertiary-red` | `#D50204` | strong red accent |
 | `--color-green-normal` | `#00CE17` | vivid mid green for text accents |
+
+### Typography
+
+The project uses a combination of a bold, sporty font for branding and a modern, high-legibility font for UI.
+
+| Role | Font Family | Weight | Tracking | Case |
+| ---- | ----------- | ------ | -------- | ---- |
+| **Display / Logo / Titles** | Montserrat | Black (900) | `-0.06em` | Uppercase |
+| **All UI / Content** | Geist Sans | Variable (300-900) | Normal | Mixed |
+
+Tokens:
+- `font-sans`: Geist Sans
+- `font-display`: Montserrat
 
 ### Existing Utility Classes
 
@@ -131,6 +146,8 @@ This is defined in `src/app/globals.css` with:
 
 Use the local planning docs as context when implementing product-facing features:
 
+- `.planning/backend-context/README.md`
+- `.planning/backend-context/DATABASE.md`
 - `.planning/README.md`
 - `.planning/ImplementationPlan.md`
 - `.planning/manual-tasks.md`
@@ -148,6 +165,7 @@ Product assumptions currently visible in the app/planning:
 - When touching visual tokens, check `src/app/globals.css` before adding hardcoded colors.
 - When adding shared client state, inspect `src/store/` before creating a new store.
 - When wiring API calls, extend `src/api/client.ts` or existing hooks/stores rather than scattering fetch logic everywhere.
+- When reading backend collections, unwrap the paginated `results` array instead of assuming the response is an array.
 - When working with logos or SVGs in `public/`, verify whether the whitespace problem is inside the asset `viewBox` before trying to solve it only with CSS.
 - When changing SSR-rendered UI, watch for hydration mismatch risks from browser extensions, locale output, or client-only values.
 

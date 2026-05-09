@@ -8,9 +8,11 @@ __turbopack_context__.s([
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/frontend/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/frontend/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$frontend$2f$src$2f$api$2f$client$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/frontend/src/api/client.ts [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
 "use client";
+;
 ;
 function Fixtures() {
     _s();
@@ -18,13 +20,8 @@ function Fixtures() {
     const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(true);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "Fixtures.useEffect": ()=>{
-            // Note: Replaced temporary fetch relative to origin
-            fetch('/api/fixtures').then({
-                "Fixtures.useEffect": (res)=>res.json()
-            }["Fixtures.useEffect"]).then({
-                "Fixtures.useEffect": (data)=>{
-                    if (Array.isArray(data)) setFixtures(data);
-                }
+            (0, __TURBOPACK__imported__module__$5b$project$5d2f$frontend$2f$src$2f$api$2f$client$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["apiFetch"])('/api/fixtures').then({
+                "Fixtures.useEffect": (data)=>setFixtures(data.results)
             }["Fixtures.useEffect"]).catch(console.error).finally({
                 "Fixtures.useEffect": ()=>setLoading(false)
             }["Fixtures.useEffect"]);
@@ -35,7 +32,7 @@ function Fixtures() {
         children: "Cargando partidos..."
     }, void 0, false, {
         fileName: "[project]/frontend/src/app/(main)/fixture/page.tsx",
-        lineNumber: 31,
+        lineNumber: 30,
         columnNumber: 23
     }, this);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -46,7 +43,7 @@ function Fixtures() {
                 children: "Partidos"
             }, void 0, false, {
                 fileName: "[project]/frontend/src/app/(main)/fixture/page.tsx",
-                lineNumber: 35,
+                lineNumber: 34,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("ul", {
@@ -55,7 +52,7 @@ function Fixtures() {
                         children: "No hay partidos programados."
                     }, void 0, false, {
                         fileName: "[project]/frontend/src/app/(main)/fixture/page.tsx",
-                        lineNumber: 37,
+                        lineNumber: 36,
                         columnNumber: 35
                     }, this),
                     fixtures.map((f)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
@@ -70,25 +67,25 @@ function Fixtures() {
                                     children: f.status
                                 }, void 0, false, {
                                     fileName: "[project]/frontend/src/app/(main)/fixture/page.tsx",
-                                    lineNumber: 40,
+                                    lineNumber: 39,
                                     columnNumber: 63
                                 }, this)
                             ]
                         }, f.id, true, {
                             fileName: "[project]/frontend/src/app/(main)/fixture/page.tsx",
-                            lineNumber: 39,
+                            lineNumber: 38,
                             columnNumber: 11
                         }, this))
                 ]
             }, void 0, true, {
                 fileName: "[project]/frontend/src/app/(main)/fixture/page.tsx",
-                lineNumber: 36,
+                lineNumber: 35,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/frontend/src/app/(main)/fixture/page.tsx",
-        lineNumber: 34,
+        lineNumber: 33,
         columnNumber: 5
     }, this);
 }
