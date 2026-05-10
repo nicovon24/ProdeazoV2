@@ -31,8 +31,9 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
-    if (!loading && user) router.replace('/fixture')
+    if (!loading && user) router.replace('/home')
   }, [loading, router, user])
+
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -50,8 +51,9 @@ export default function Login() {
     setSubmitting(true)
     try {
       await login(email.trim(), password)
-      router.replace('/fixture')
+      router.replace('/home')
     } catch (err) {
+
       setErrors([getLoginErrorMessage(err)])
     } finally {
       setSubmitting(false)
@@ -79,6 +81,7 @@ export default function Login() {
         <AuthInput
           label="Email"
           type="email"
+          name="email"
           autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -89,6 +92,7 @@ export default function Login() {
         <AuthInput
           label="Contraseña"
           type={showPassword ? 'text' : 'password'}
+          name="password"
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}

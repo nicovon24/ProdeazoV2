@@ -134,13 +134,14 @@ export default function Landing() {
                 className="relative flex w-full max-w-[min(100%,28rem)] flex-col items-center px-1 sm:px-2"
               >
                 <div className="relative aspect-square w-[min(100%,12rem)] sm:w-52 md:w-60 lg:w-[min(18rem,32vw)] xl:w-72">
+                  <div className="absolute inset-0 -z-10 rounded-full bg-primary/30 blur-2xl" />
                   <motion.img
                     src={LOGO_SRC}
                     alt="Prodeazo FIFA 2026"
                     initial={{ filter: 'blur(10px)', opacity: 0 }}
                     animate={{ filter: 'blur(0px)', opacity: 1 }}
                     transition={{ duration: 1.5, delay: 0.5 }}
-                    className="h-full w-full object-contain drop-shadow-[0_0_25px_rgba(175,232,5,0.5)]"
+                    className="h-full w-full object-contain drop-shadow-[0_0_30px_rgba(175,232,5,0.6)]"
                   />
                 </div>
                 <p className="mt-2 text-center font-display text-[clamp(1.75rem,7vw,3rem)] font-bold uppercase leading-none tracking-[-0.06em] text-foreground sm:mt-3 sm:text-5xl md:text-6xl xl:text-7xl select-none">

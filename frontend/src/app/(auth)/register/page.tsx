@@ -42,8 +42,9 @@ export default function Register() {
   const isStep2Valid = password.length > 0 && confirmPassword.length > 0
 
   useEffect(() => {
-    if (!loading && user) router.replace('/fixture')
+    if (!loading && user) router.replace('/home')
   }, [loading, router, user])
+
 
   const validateStep1 = () => {
     const nextErrors: string[] = []
@@ -100,8 +101,9 @@ export default function Register() {
     setSubmitting(true)
     try {
       await register(name.trim(), email.trim(), password)
-      router.replace('/fixture')
+      router.replace('/home')
     } catch (err) {
+
       setErrors([getRegisterErrorMessage(err)])
     } finally {
       setSubmitting(false)
@@ -164,6 +166,7 @@ export default function Register() {
                 <AuthInput
                   label="Nombre completo"
                   type="text"
+                  name="name"
                   autoComplete="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -175,6 +178,7 @@ export default function Register() {
                 <AuthInput
                   label="Email"
                   type="email"
+                  name="email"
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -199,6 +203,7 @@ export default function Register() {
                 <AuthInput
                   label="Contraseña"
                   type={showPassword ? 'text' : 'password'}
+                  name="password"
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -218,6 +223,7 @@ export default function Register() {
                 <AuthInput
                   label="Confirmar contraseña"
                   type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
