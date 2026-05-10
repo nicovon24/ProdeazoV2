@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/JUNIOR/Desktop/prodeazo/frontend/src/app/providers.tsx"],"sourcesContent":["\"use client\";\n\nimport { QueryClient, QueryClientProvider } from \"@tanstack/react-query\";\nimport { useState } from \"react\";\n\nexport function Providers({ children }: { children: React.ReactNode }) {\n  const [queryClient] = useState(() => new QueryClient());\n  return (\n    <QueryClientProvider client={queryClient}>\n      {children}\n    </QueryClientProvider>\n  );\n}\n"],"names":["Providers","children","queryClient","client"],"mappings":";;;;;AAEA;AAAA;AACA;;;AAHA;;;AAKO,SAASA,UAAU,EAAEC,QAAQ,EAAiC;;IACnE,MAAM,CAACC,YAAY,GAAG,IAAA,qLAAQ;8BAAC,IAAM,IAAI,2MAAW;;IACpD,qBACE,yMAAC,4NAAmB;QAACC,QAAQD;kBAC1BD;;;;;;AAGP;GAPgBD;KAAAA"}}]
-}
