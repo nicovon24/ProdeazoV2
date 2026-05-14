@@ -49,6 +49,26 @@ FRONTEND_URL=http://localhost:3000
 PORT=4000
 ```
 
+Para Google OAuth en local, el cliente de Google Cloud debe estar configurado contra el backend Express, no contra Next/Vercel/Supabase:
+
+```env
+GOOGLE_CALLBACK_URL=http://localhost:4000/api/auth/callback
+```
+
+En Google Cloud Console, agregar como URI de redireccionamiento autorizada:
+
+```text
+http://localhost:4000/api/auth/callback
+```
+
+Y como orígenes JavaScript autorizados, según los puertos usados en local:
+
+```text
+http://localhost:3000
+http://localhost:3001
+http://localhost:4000
+```
+
 ### Frontend (`/frontend/.env.local`)
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
