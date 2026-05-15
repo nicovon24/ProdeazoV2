@@ -7,6 +7,7 @@ import { dedupeTeams } from '../providers/normalize'
 import { FixtureStatus } from '../constants/fixture-status'
 import type { ProviderFixtureStatus } from '../providers/types'
 import { normalizeBzzoiroApiKey } from '../providers/bzzoiro-token'
+import { upsertTournament } from '../models/tournament.model'
 
 type SeedConfig =
   | { kind: 'season'; seasonId: string; apiKey: string }
@@ -76,6 +77,12 @@ async function seed() {
   const tz = process.env.BSD_TIMEZONE ?? 'UTC'
   const base = (process.env.BZZOIRO_BASE_URL ?? 'https://sports.bzzoiro.com/api').replace(/\/+$/, '')
 
+  // Read tournament meta env vars
+  const tournamentName = (process.env.TOURNAMENT_NAME ?? '').trim()
+  if (!tournamentName) throw new Error('Missing TOURNAMENT_NAME — set it in backend/.env or backend/.env.local')
+  const tournamentShortName = (process.env.TOURNAMENT_SHORT_NAME ?? '').trim() || undefined
+  const isDefault = (process.env.IS_DEFAULT ?? 'false').trim().toLowerCase() === 'true'
+
   const provider = createBzzoiroProvider({
     apiKey: config.apiKey,
     baseUrl: base,
@@ -83,9 +90,12 @@ async function seed() {
   })
 
   let fixturesData: Awaited<ReturnType<typeof provider.listFixtures>>
+  let fetchedSeasonIds: string[] = []
+
   if (config.kind === 'season') {
     console.log(`Fetching fixtures for BSD season ${config.seasonId}…`)
     fixturesData = await provider.listFixtures({ seasonId: config.seasonId })
+    fetchedSeasonIds = [config.seasonId]
   } else if (config.kind === 'seasons') {
     console.log(`Fetching fixtures for BSD seasons ${config.seasonIds.join(', ')}…`)
     const seen = new Set<string>()
@@ -98,12 +108,19 @@ async function seed() {
         fixturesData.push(f)
       }
     }
+    fetchedSeasonIds = config.seasonIds
     console.log(`  → merged ${fixturesData.length} unique fixtures`)
   } else if (config.kind === 'league') {
     console.log(
       `Fetching all fixtures for BSD league ${config.leagueId} (paginated /v2/events/?league_id=… ; grupos + todas las temporadas de esa liga)…`
     )
     fixturesData = await provider.listFixtures({ leagueId: config.leagueId })
+    // Collect unique season ids from fixtures
+    const seasonSet = new Set<string>()
+    for (const f of fixturesData) {
+      if (f.seasonId) seasonSet.add(String(f.seasonId))
+    }
+    fetchedSeasonIds = [...seasonSet]
     console.log(`  → ${fixturesData.length} fixtures`)
   } else {
     console.log(
@@ -114,6 +131,11 @@ async function seed() {
       dateFrom: config.dateFrom,
       dateTo: config.dateTo,
     })
+    const seasonSet = new Set<string>()
+    for (const f of fixturesData) {
+      if (f.seasonId) seasonSet.add(String(f.seasonId))
+    }
+    fetchedSeasonIds = [...seasonSet]
   }
 
   const leagueIdForRoster =
@@ -178,7 +200,7 @@ async function seed() {
   if (placeholderCount > 0 && teamEntities.length > 0 && placeholderCount >= Math.ceil(teamEntities.length * 0.25)) {
     console.warn(
       `[seed] ${placeholderCount}/${teamEntities.length} sides look like bracket placeholders (e.g. 1A, W73, 3C/3E/…), not final country names. ` +
-        'Bzzoiro models undecided World Cup slots as synthetic “teams”; after the draw / when events show real nations, run seed again.'
+        'Bzzoiro models undecided World Cup slots as synthetic "teams"; after the draw / when events show real nations, run seed again.'
     )
   }
   console.log(`Seeding ${teamEntities.length} teams…`)
@@ -200,6 +222,19 @@ async function seed() {
 
     console.log(`  ${team.name}`)
   }
+
+  // Upsert the tournament record
+  const leagueIdNum = Number.parseInt(leagueIdForRoster || '0', 10)
+  const seasonIdsCsv = fetchedSeasonIds.length > 0 ? fetchedSeasonIds.join(',') : '0'
+  console.log(`Upserting tournament "${tournamentName}"…`)
+  const tournament = await upsertTournament({
+    name: tournamentName,
+    shortName: tournamentShortName,
+    leagueId: leagueIdNum,
+    seasonIds: seasonIdsCsv,
+    isDefault,
+  })
+  console.log(`  → tournament id: ${tournament.id}`)
 
   console.log('Seeding fixtures…')
   for (const fx of fixturesData) {
@@ -235,6 +270,7 @@ async function seed() {
         status: statusToDb(fx.status),
         homeScore: fx.homeScore ?? null,
         awayScore: fx.awayScore ?? null,
+        tournamentId: tournament.id,
       })
       .onConflictDoNothing()
   }
