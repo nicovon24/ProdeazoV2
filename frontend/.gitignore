@@ -17,6 +17,7 @@ build
 dist
 
 # Other
+.env
 .env*.local
 .vercel
 backend-context/
