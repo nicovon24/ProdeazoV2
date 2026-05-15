@@ -63,21 +63,6 @@ export function Header({ title, subtitle }: HeaderProps) {
         {subtitle && <p className={styles.pageSubtitle}>{subtitle}</p>}
       </div>
 
-      {/* Tournament selector */}
-      {tournaments.length > 1 && (
-        <select
-          className={styles.tournamentSelect}
-          value={activeTournamentId ?? ''}
-          onChange={(e) => setActiveTournament(e.target.value)}
-        >
-          {tournaments.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.shortName ?? t.name}
-            </option>
-          ))}
-        </select>
-      )}
-
       {/* Help button */}
       <button className={styles.iconButton} type="button" title="Ayuda">
         <HelpCircle className={styles.iconButtonIcon} />

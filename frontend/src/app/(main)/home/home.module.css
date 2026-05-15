@@ -6,6 +6,61 @@
   gap: 24px;
 }
 
+/* ── Tournament bar ── */
+.tournamentBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+}
+
+.tournamentBarLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.5);
+  white-space: nowrap;
+}
+
+.tournamentBarIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-primary, #AFE805);
+}
+
+.tournamentTabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tournamentTab {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tournamentTab:hover {
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+}
+
+.tournamentTabActive {
+  background: rgba(175, 232, 5, 0.15);
+  border-color: rgba(175, 232, 5, 0.4);
+  color: var(--color-primary, #AFE805);
+}
+
 /* ── Top Stat Cards ── */
 .statsRow {
   display: grid;

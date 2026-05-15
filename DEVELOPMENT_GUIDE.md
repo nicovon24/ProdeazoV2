@@ -1,147 +1,312 @@
-# 🚀 Guía de Desarrollo - Prodeazo
+# Guía de Desarrollo — Prodeazo
 
-Esta guía detalla los pasos necesarios para configurar y ejecutar el proyecto Prodeazo en tu entorno local.
+## Requisitos Previos
 
-## 📌 Requisitos Previos
-*   **Node.js** (v20 o superior recomendado).
-*   **Docker Desktop** (Esencial para la base de datos, Redis y el Backend).
-*   **Git**.
+- **Node.js** v20+
+- **Docker Desktop** (DB, Redis, Backend corren en Docker)
+- **pnpm** (`npm i -g pnpm`)
+- **Git**
 
 ---
 
-## 1. Preparación Inicial
-Asegúrate de estar en la rama correcta de desarrollo de frontend:
-```bash
-git checkout feat/frontend
-```
+## 1. Clonar e instalar dependencias
 
-Instala las dependencias generales en la raíz (usamos un espacio de trabajo de npm/pnpm si es necesario, o simplemente instala en cada carpeta):
 ```bash
-# En la carpeta frontend
-cd frontend
-npm install
-
-# En la carpeta backend
-cd ../backend
-npm install
+git clone <repo>
+cd ProdeazoAppNuevo
+pnpm install
 ```
 
 ---
 
-## 2. Configuración de Variables de Entorno (.env)
+## 2. Variables de entorno
 
-Debes crear dos archivos de configuración. Puedes usar los `.env.example` como base.
+### Backend — `backend/.env`
 
-### Backend (`/backend/.env`)
-Crea el archivo con estos valores clave:
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/prodeazo
-REDIS_URL=redis://localhost:6379
-SESSION_SECRET="tu_secreto_aqui"
-SESSION_STORE=memory  # Usar 'memory' en local para evitar conflictos de versiones con Redis
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/prodeazo"
+POSTGRES_USER="postgres"
+POSTGRES_PASSWORD="postgres"
+POSTGRES_DB="prodeazo"
 
-BZZOIRO_API_KEY="tu_api_key_real"
+REDIS_URL="redis://localhost:6379"
+SESSION_SECRET="un_secreto_largo_aleatorio"
+
+BZZOIRO_API_KEY="tu_api_key"
 BZZOIRO_BASE_URL="https://sports.bzzoiro.com/api"
-TOURNAMENT_ID=188 # ID del Mundial 2026 en BSD
-BZZOIRO_LEAGUE_ID=27
 
-FRONTEND_URL=http://localhost:3000
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
+GOOGLE_CALLBACK_URL="http://localhost:4000/api/auth/callback"
+
+FRONTEND_URL="http://localhost:3000"
+NODE_ENV="development"
 PORT=4000
 ```
 
-Para Google OAuth en local, el cliente de Google Cloud debe estar configurado contra el backend Express, no contra Next/Vercel/Supabase:
+> `TOURNAMENT_ID` y `BZZOIRO_LEAGUE_ID` ya no son necesarios — los torneos se gestionan desde la DB.
 
-```env
-GOOGLE_CALLBACK_URL=http://localhost:4000/api/auth/callback
-```
+### Frontend — `frontend/.env`
 
-En Google Cloud Console, agregar como URI de redireccionamiento autorizada:
-
-```text
-http://localhost:4000/api/auth/callback
-```
-
-Y como orígenes JavaScript autorizados, según los puertos usados en local:
-
-```text
-http://localhost:3000
-http://localhost:3001
-http://localhost:4000
-```
-
-### Frontend (`/frontend/.env.local`)
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
 ```
 
+### Google Cloud Console
+
+Orígenes JS autorizados:
+```
+http://localhost:3000
+http://localhost:4000
+```
+
+URIs de redireccionamiento:
+```
+http://localhost:4000/api/auth/callback
+```
+
 ---
 
-## 3. Infraestructura con Docker
-El backend y la base de datos corren dentro de Docker para asegurar que todos usemos el mismo entorno.
+## 3. Levantar la infraestructura
 
-Desde la **raíz del proyecto**, ejecuta:
 ```bash
 docker compose up -d
 ```
-Esto levantará:
-*   **Postgres (db):** En el puerto 5432.
-*   **Redis:** En el puerto 6379.
-*   **Backend:** En el puerto 4000.
-*   **Migrate:** Tarea única para crear las tablas en la DB.
 
----
+Levanta: **Postgres** (5432), **Redis** (6379), **Backend** (4000), **migrate** (tarea única).
 
-## 4. Carga de Datos (Seeding)
-Para que la aplicación tenga equipos y partidos reales del Mundial, debes popular la base de datos. Ejecuta este comando desde la raíz:
-
+Verificar que todo esté healthy:
 ```bash
-docker compose run --rm migrate pnpm run seed
-```
-*Si esto falla por falta de API Key, puedes usar una carga de prueba:*
-```bash
-docker compose run --rm migrate pnpm run seed:mock
+docker compose ps
 ```
 
 ---
 
-## 5. Ejecutar el Frontend
-Una vez que Docker está corriendo y la base de datos tiene datos, inicia el servidor de desarrollo del frontend:
+## 4. Cargar torneos (Seed)
+
+Los torneos están definidos en `backend/src/scripts/tournaments.config.ts`. Para agregar o modificar torneos, editá ese archivo.
+
+Correr el seed desde la carpeta `backend/`:
+
+```bash
+cd backend
+pnpm seed
+```
+
+Esto crea/actualiza los registros de torneos en la DB y carga los fixtures y equipos correspondientes.
+
+Para datos de prueba sin API key:
+```bash
+pnpm seed:mock
+```
+
+---
+
+## 5. Ejecutar el frontend
 
 ```bash
 cd frontend
-npm run dev
+pnpm dev
 ```
-La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
+
+Disponible en [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🛠 Solución de Problemas Comunes
+## API Reference
 
-### 1. Choque de Puertos (Puerto 3000 ocupado)
-Si el frontend intenta abrirse en el 3001, asegúrate de que el `docker-compose.yml` mapee el backend al puerto 4000 y no al 3000.
-*   **Check:** `docker compose ps` para ver los puertos activos.
+Base URL: `http://localhost:4000`
 
-### 2. Error 404 en /login o /register
-Si Next.js no encuentra las rutas después de un movimiento de archivos o cambio de rama:
-```bash
-cd frontend
-Remove-Item -Recurse -Force .next  # En PowerShell
-npm run dev
+### Auth
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/auth/google` | Iniciar OAuth con Google | No |
+| `GET` | `/api/auth/callback` | Callback OAuth de Google | No |
+| `POST` | `/api/auth/register` | Registrar usuario local | No |
+| `POST` | `/api/auth/login` | Login local | No |
+| `POST` | `/api/auth/logout` | Cerrar sesión | Sí |
+| `GET` | `/api/auth/me` | Usuario autenticado actual | Sí |
+
+### Tournaments
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/tournaments` | Lista de torneos activos | No |
+| `GET` | `/api/tournaments/:id` | Detalle de un torneo | No |
+
+**GET /api/tournaments**
+```json
+{
+  "tournaments": [
+    {
+      "id": "cuid",
+      "name": "FIFA World Cup 2026",
+      "shortName": "WC2026",
+      "leagueId": 27,
+      "seasonIds": "188",
+      "isDefault": true
+    }
+  ]
+}
 ```
 
-### 3. Errores de CORS (Origin blocked)
-Si el backend rechaza la conexión, verifica que en `backend/src/index.ts` el arreglo de `origins` incluya tanto el puerto 3000 como el 3001. Luego reconstruye el backend:
-```bash
-docker compose up -d --build backend
+**GET /api/tournaments/:id**
+```json
+{
+  "id": "cuid",
+  "name": "FIFA World Cup 2026",
+  "shortName": "WC2026",
+  "leagueId": 27,
+  "seasonIds": "188",
+  "isDefault": true,
+  "active": true,
+  "createdAt": "2026-05-14T..."
+}
 ```
 
-### 4. Error 500 al Iniciar Sesión (Redis Error)
-Si ves errores de Redis en los logs de Docker, asegúrate de que `SESSION_STORE=memory` esté configurado en tu `.env` del backend para desarrollo local.
+### Fixtures
+
+Todos los endpoints aceptan `?tournamentId=<id>`. Si se omite, usa el torneo con `isDefault = true`.
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/fixtures` | Lista de fixtures con equipos | Sí |
+| `GET` | `/api/fixtures/live` | Partidos en vivo | Sí |
+| `GET` | `/api/fixtures/standings` | Tabla de posiciones | Sí |
+
+**Estados de fixture:** `not_started` · `in_progress` · `finished` · `postponed` · `cancelled`
+
+**GET /api/fixtures** — responde paginado:
+```json
+{
+  "count": 104,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 8390,
+      "date": "2026-07-19T20:00:00.000Z",
+      "round": "Final",
+      "groupLabel": null,
+      "status": "not_started",
+      "homeScore": null,
+      "awayScore": null,
+      "homeTeam": { "id": 1, "name": "Argentina", "shortName": null, "logoUrl": "..." },
+      "awayTeam": { "id": 2, "name": "Brasil", "shortName": null, "logoUrl": "..." }
+    }
+  ]
+}
+```
+
+### Predictions
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/predictions` | Predicciones del usuario autenticado | Sí |
+| `POST` | `/api/predictions` | Crear o actualizar predicción | Sí |
+
+`GET /api/predictions` acepta `?tournamentId=<id>`.
+
+**POST /api/predictions**
+```json
+{ "fixtureId": 8390, "homeGoals": 2, "awayGoals": 1 }
+```
+
+### Teams
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/teams` | Lista de equipos | Sí |
+
+### Mini-Leagues
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/mini-leagues` | Ligas del usuario | Sí |
+| `POST` | `/api/mini-leagues` | Crear liga | Sí |
+| `POST` | `/api/mini-leagues/join` | Unirse a liga por código | Sí |
+
+### Leaderboard
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/leaderboard` | Ranking global | Sí |
 
 ---
 
-## 📝 Comandos Útiles de Docker
-*   **Ver logs:** `docker compose logs -f backend`
-*   **Reiniciar todo:** `docker compose restart`
-*   **Apagar todo:** `docker compose down` (borra contenedores, mantiene datos).
-*   **Limpieza total:** `docker compose down -v` (**BORRA** la base de datos).
+## Torneos — Agregar uno nuevo
+
+Editá `backend/src/scripts/tournaments.config.ts`:
+
+```typescript
+export const TOURNAMENTS: TournamentSeedConfig[] = [
+  {
+    name: 'FIFA World Cup 2026',
+    shortName: 'WC2026',
+    leagueId: '27',
+    seasonId: '188',
+    isDefault: true,       // ← solo uno puede ser default
+  },
+  {
+    name: 'Premier League 2025/26',
+    shortName: 'PL2526',
+    leagueId: '1',
+    seasonId: '337',
+    isDefault: false,
+  },
+  // Agregar más acá...
+]
+```
+
+Para encontrar el `leagueId` y `seasonId` de Bzzoiro:
+```bash
+# Buscar ligas por país
+curl "https://sports.bzzoiro.com/api/v2/leagues/?country=England" \
+  -H "Authorization: Token <BZZOIRO_API_KEY>"
+
+# Ver temporadas de una liga
+curl "https://sports.bzzoiro.com/api/v2/leagues/<leagueId>/seasons/" \
+  -H "Authorization: Token <BZZOIRO_API_KEY>"
+```
+
+---
+
+## Comandos útiles
+
+```bash
+# Ver logs del backend
+docker compose logs -f backend
+
+# Reconstruir backend tras cambios
+docker compose up --build -d backend
+
+# Reiniciar todo
+docker compose restart
+
+# Apagar (mantiene datos)
+docker compose down
+
+# Apagar y borrar DB
+docker compose down -v
+
+# Chequear puertos activos
+docker compose ps
+```
+
+---
+
+## Solución de problemas
+
+**Puerto 3000 ocupado** — el frontend arranca en 3001. Verificar con `docker compose ps`.
+
+**Error 404 en rutas de Next.js**
+```bash
+cd frontend && Remove-Item -Recurse -Force .next && pnpm dev
+```
+
+**Error CORS** — verificar que `backend/src/index.ts` incluya el origen del frontend en la lista de `origins`.
+
+**Error de autenticación en la DB** — verificar que `DATABASE_URL` en `backend/.env` apunte al puerto correcto (5432 para Docker).
+
+**Fixtures sin equipos (muestran `?`)** — los equipos del Mundial 2026 son placeholders hasta que se realice el sorteo. Correr `pnpm seed` de nuevo cuando Bzzoiro tenga los datos reales.

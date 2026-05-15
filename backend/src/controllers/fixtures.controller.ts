@@ -19,8 +19,44 @@ const LABEL_CACHE_TTL_SEC = Number(process.env.FIXTURE_TEAM_LABELS_CACHE_TTL_SEC
 
 type FixtureListRow = Awaited<ReturnType<typeof fixtureModel.findFixturesWithTeams>>[number]
 
+/** Shape expected by web clients (`homeTeam` / `awayTeam` objects). */
+function toFixtureApiRow(row: FixtureListRow) {
+  return {
+    id: row.id,
+    date: row.date,
+    round: row.round,
+    groupLabel: row.groupLabel,
+    status: row.status,
+    homeScore: row.homeScore,
+    awayScore: row.awayScore,
+    homeTeam:
+      row.homeTeamId != null
+        ? {
+            id: row.homeTeamId,
+            name: row.homeTeamName,
+            shortName: row.homeTeamShortName,
+            logoUrl: row.homeTeamLogoUrl,
+          }
+        : null,
+    awayTeam:
+      row.awayTeamId != null
+        ? {
+            id: row.awayTeamId,
+            name: row.awayTeamName,
+            shortName: row.awayTeamShortName,
+            logoUrl: row.awayTeamLogoUrl,
+          }
+        : null,
+  }
+}
+
+function resolveTournamentQueryParam(raw: unknown): string | undefined {
+  if (Array.isArray(raw)) return raw[0] as string | undefined
+  return raw as string | undefined
+}
+
 export async function list(req: Request, res: Response) {
-  const tournamentId = req.query.tournamentId as string | undefined
+  const tournamentId = resolveTournamentQueryParam(req.query.tournamentId)
   const tournament = await resolveTournament(tournamentId)
   if (!tournament) {
     return res.status(404).json(err('NOT_FOUND', 'Tournament not found'))
@@ -74,11 +110,11 @@ export async function list(req: Request, res: Response) {
     }
   }
 
-  res.json(paginate(out, req))
+  res.json(paginate(out.map(toFixtureApiRow), req))
 }
 
 export async function live(req: Request, res: Response) {
-  const tournamentId = req.query.tournamentId as string | undefined
+  const tournamentId = resolveTournamentQueryParam(req.query.tournamentId)
   const tournament = await resolveTournament(tournamentId)
   const cacheKey = `live:${tournament?.id ?? 'default'}`
   const cached = await getCache<unknown[]>(cacheKey)
@@ -91,7 +127,7 @@ export async function live(req: Request, res: Response) {
 }
 
 export async function standings(req: Request, res: Response) {
-  const tournamentId = req.query.tournamentId as string | undefined
+  const tournamentId = resolveTournamentQueryParam(req.query.tournamentId)
   const tournament = await resolveTournament(tournamentId)
   if (!tournament) {
     return res.status(404).json(err('NOT_FOUND', 'Tournament not found'))
@@ -101,7 +137,8 @@ export async function standings(req: Request, res: Response) {
   const cached = await getCache<unknown[]>(cacheKey)
   if (cached) return res.json(paginate(cached, req))
 
-  const data = await fetchStandings()
+  const seasonId = tournament.seasonIds ? Number(tournament.seasonIds.split(',')[0]) : undefined
+  const data = await fetchStandings(tournament.leagueId, Number.isFinite(seasonId) ? seasonId : undefined)
   await setCache(cacheKey, data, 900)
   res.json(paginate(Array.isArray(data) ? data : [data], req))
 }

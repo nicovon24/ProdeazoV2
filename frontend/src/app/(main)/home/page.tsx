@@ -1,22 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { 
-  Globe, 
-  Users, 
-  BarChart2, 
-  CalendarDays, 
-  CheckCircle, 
-  ChevronUp, 
+import {
+  Globe,
+  Users,
+  BarChart2,
+  CalendarDays,
+  CheckCircle,
+  ChevronUp,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Trophy,
 } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import { Header } from "../../../components/layout/Header";
+import { useTournamentStore } from "../../../store/useTournamentStore";
 import styles from "./home.module.css";
 
 export default function HomePage() {
   const { user } = useAuth();
+  const { tournaments, activeTournamentId, setActiveTournament } = useTournamentStore();
+  const activeTournament = tournaments.find(t => t.id === activeTournamentId);
 
   return (
     <>
@@ -25,6 +29,26 @@ export default function HomePage() {
         subtitle={`Bienvenido de vuelta, ${user?.name ?? "Usuario"}. Este es tu resumen.`}
       />
       <main className={styles.main}>
+        {/* Tournament selector */}
+        {tournaments.length > 1 && (
+          <div className={styles.tournamentBar}>
+            <span className={styles.tournamentBarLabel}>
+              <Trophy className={styles.tournamentBarIcon} />
+              Torneo activo:
+            </span>
+            <div className={styles.tournamentTabs}>
+              {tournaments.map(t => (
+                <button
+                  key={t.id}
+                  className={`${styles.tournamentTab} ${t.id === activeTournamentId ? styles.tournamentTabActive : ''}`}
+                  onClick={() => setActiveTournament(t.id)}
+                >
+                  {t.shortName ?? t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Top Stat Cards */}
         <div className={styles.statsRow}>
           {/* Global Pos */}

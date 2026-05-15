@@ -7,9 +7,10 @@ export interface Prediction {
   awayGoals: number
 }
 
-export function fetchPredictions(tournamentId?: string | null): Promise<Prediction[]> {
+export async function fetchPredictions(tournamentId?: string | null): Promise<Prediction[]> {
   const params = tournamentId ? `?tournamentId=${tournamentId}` : ''
-  return apiFetch<Prediction[]>(`/api/predictions${params}`)
+  const data = await apiFetch<{ results: Prediction[] } | Prediction[]>(`/api/predictions${params}`)
+  return Array.isArray(data) ? data : data.results
 }
 
 export function savePrediction(fixtureId: number, homeGoals: number, awayGoals: number): Promise<void> {

@@ -18,6 +18,7 @@ export async function create(req: Request, res: Response) {
 
   const userId = (req.user as any).id
   const [league] = await miniLeagueModel.insertLeague(parsed.data.name, userId)
+  if (!league) return res.status(500).json(err('INTERNAL_ERROR', 'Failed to create league'))
   await miniLeagueModel.insertMember(league.id, userId, 'owner')
 
   res.status(201).json(league)
@@ -89,6 +90,22 @@ export async function removeMember(req: Request, res: Response) {
   const [removed] = await miniLeagueModel.deleteMember(id, userId)
   if (!removed) return res.status(404).json(err('NOT_FOUND', 'Member not found'))
 
+  res.json({ ok: true })
+}
+
+export async function deleteLeague(req: Request, res: Response) {
+  const userId = (req.user as any).id
+  const id = p(req.params.id)
+
+  const [league] = await miniLeagueModel.findLeagueById(id)
+  if (!league) return res.status(404).json(err('NOT_FOUND', 'League not found'))
+
+  const [membership] = await miniLeagueModel.findMember(id, userId)
+  if (!membership || membership.role !== 'owner') {
+    return res.status(403).json(err('FORBIDDEN', 'Only the owner can delete this league'))
+  }
+
+  await miniLeagueModel.deleteLeague(id)
   res.json({ ok: true })
 }
 

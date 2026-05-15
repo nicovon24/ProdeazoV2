@@ -95,6 +95,112 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.filterDropdown {
+  position: relative;
+}
+
+.filterMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  background-color: #141414;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filterMenuItem {
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filterMenuItem:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.filterMenuItemActive {
+  background-color: rgba(175, 232, 5, 0.12);
+  color: var(--color-primary, #AFE805);
+}
+
+.filterMenuPager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 4px 2px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.5);
+}
+
+.filterMenuPagerBtn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.filterMenuPagerBtn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.filterMenuPagerBtn:not(:disabled):hover {
+  color: #fff;
+}
+
+/* Status filter pills */
+.statusFilters {
+  display: flex;
+  gap: 6px;
+}
+
+.statusBtn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.6);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.statusBtn:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+
+.statusBtnActive {
+  background: rgba(175, 232, 5, 0.15);
+  border-color: rgba(175, 232, 5, 0.4);
+  color: var(--color-primary, #AFE805);
+}
+
 .calendarBtn {
   margin-left: auto;
   display: flex;

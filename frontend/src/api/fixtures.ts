@@ -19,7 +19,8 @@ export interface Fixture {
   awayScore: number | null
 }
 
-export function fetchFixtures(tournamentId?: string | null): Promise<Fixture[]> {
+export async function fetchFixtures(tournamentId?: string | null): Promise<Fixture[]> {
   const params = tournamentId ? `?tournamentId=${tournamentId}` : ''
-  return apiFetch<Fixture[]>(`/api/fixtures${params}`)
+  const data = await apiFetch<{ results: Fixture[] } | Fixture[]>(`/api/fixtures${params}`)
+  return Array.isArray(data) ? data : data.results
 }

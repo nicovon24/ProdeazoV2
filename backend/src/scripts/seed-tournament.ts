@@ -1,6 +1,7 @@
 import '../env'
 import { db, pool } from '../db/client'
 import { teams, fixtures } from '../db/schema'
+import { sql } from 'drizzle-orm'
 import { createBzzoiroProvider, extractTeamsFromFixtures } from '../providers/bzzoiro'
 import { enrichFixturesTeamsFromRoster, isLikelyBracketPlaceholder } from '../providers/participant-names'
 import { dedupeTeams } from '../providers/normalize'
@@ -8,53 +9,7 @@ import { FixtureStatus } from '../constants/fixture-status'
 import type { ProviderFixtureStatus } from '../providers/types'
 import { normalizeBzzoiroApiKey } from '../providers/bzzoiro-token'
 import { upsertTournament } from '../models/tournament.model'
-
-type SeedConfig =
-  | { kind: 'season'; seasonId: string; apiKey: string }
-  | { kind: 'seasons'; seasonIds: string[]; apiKey: string }
-  | { kind: 'league'; leagueId: string; apiKey: string }
-  | { kind: 'daterange'; leagueId: string; dateFrom: string; dateTo: string; apiKey: string }
-
-function parseFixtureSeasonIds(): string[] {
-  const raw = (process.env.BZZOIRO_FIXTURE_SEASON_IDS ?? '').trim()
-  if (!raw) return []
-  return raw
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => /^\d+$/.test(s))
-}
-
-function loadSeedConfig(): SeedConfig {
-  const apiKey = normalizeBzzoiroApiKey(process.env.BZZOIRO_API_KEY ?? '')
-  if (!apiKey)
-    throw new Error('Missing BZZOIRO_API_KEY — add it to backend/.env or backend/.env.local')
-
-  const seasonId = normalizeBzzoiroApiKey(process.env.TOURNAMENT_ID ?? '')
-  const leagueId = (process.env.BZZOIRO_LEAGUE_ID ?? '').trim()
-  const dateFrom = (process.env.BZZOIRO_EVENTS_DATE_FROM ?? '').trim()
-  const dateTo = (process.env.BZZOIRO_EVENTS_DATE_TO ?? '').trim()
-  const fixtureSeasonIds = parseFixtureSeasonIds()
-
-  if (leagueId && dateFrom && dateTo) {
-    return { kind: 'daterange', leagueId, dateFrom, dateTo, apiKey }
-  }
-  if (fixtureSeasonIds.length > 0) {
-    return { kind: 'seasons', seasonIds: fixtureSeasonIds, apiKey }
-  }
-  if (leagueId) {
-    return { kind: 'league', leagueId, apiKey }
-  }
-  if (seasonId) {
-    return { kind: 'season', seasonId, apiKey }
-  }
-
-  throw new Error(
-    'Set BZZOIRO_LEAGUE_ID (all fixtures under that league: grupos + todas las temporadas BSD), ' +
-      'or BZZOIRO_FIXTURE_SEASON_IDS=383,188 (solo esas temporadas, ej. grupo + eliminatoria), ' +
-      'or TOURNAMENT_ID (una sola temporada), ' +
-      'or BZZOIRO_LEAGUE_ID + BZZOIRO_EVENTS_DATE_FROM + BZZOIRO_EVENTS_DATE_TO (YYYY-MM-DD).'
-  )
-}
+import { TOURNAMENTS, type TournamentSeedConfig } from './tournaments.config'
 
 function statusToDb(s: ProviderFixtureStatus): string {
   switch (s) {
@@ -71,77 +26,20 @@ function statusToDb(s: ProviderFixtureStatus): string {
   }
 }
 
-async function seed() {
-  const config = loadSeedConfig()
-  console.log(`Bzzoiro: API token loaded (${config.apiKey.length} chars).`)
-  const tz = process.env.BSD_TIMEZONE ?? 'UTC'
-  const base = (process.env.BZZOIRO_BASE_URL ?? 'https://sports.bzzoiro.com/api').replace(/\/+$/, '')
+async function seedTournament(tournamentCfg: TournamentSeedConfig, apiKey: string, base: string, tz: string) {
+  console.log(`\n=== Seeding "${tournamentCfg.name}" ===`)
 
-  // Read tournament meta env vars
-  const tournamentName = (process.env.TOURNAMENT_NAME ?? '').trim()
-  if (!tournamentName) throw new Error('Missing TOURNAMENT_NAME — set it in backend/.env or backend/.env.local')
-  const tournamentShortName = (process.env.TOURNAMENT_SHORT_NAME ?? '').trim() || undefined
-  const isDefault = (process.env.IS_DEFAULT ?? 'false').trim().toLowerCase() === 'true'
-
-  const provider = createBzzoiroProvider({
-    apiKey: config.apiKey,
-    baseUrl: base,
-    timezone: tz,
-  })
+  const provider = createBzzoiroProvider({ apiKey, baseUrl: base, timezone: tz })
+  const config = { kind: 'season' as const, seasonId: tournamentCfg.seasonId, leagueId: tournamentCfg.leagueId, apiKey }
 
   let fixturesData: Awaited<ReturnType<typeof provider.listFixtures>>
   let fetchedSeasonIds: string[] = []
 
-  if (config.kind === 'season') {
-    console.log(`Fetching fixtures for BSD season ${config.seasonId}…`)
-    fixturesData = await provider.listFixtures({ seasonId: config.seasonId })
-    fetchedSeasonIds = [config.seasonId]
-  } else if (config.kind === 'seasons') {
-    console.log(`Fetching fixtures for BSD seasons ${config.seasonIds.join(', ')}…`)
-    const seen = new Set<string>()
-    fixturesData = []
-    for (const sid of config.seasonIds) {
-      const chunk = await provider.listFixtures({ seasonId: sid })
-      for (const f of chunk) {
-        if (seen.has(f.id)) continue
-        seen.add(f.id)
-        fixturesData.push(f)
-      }
-    }
-    fetchedSeasonIds = config.seasonIds
-    console.log(`  → merged ${fixturesData.length} unique fixtures`)
-  } else if (config.kind === 'league') {
-    console.log(
-      `Fetching all fixtures for BSD league ${config.leagueId} (paginated /v2/events/?league_id=… ; grupos + todas las temporadas de esa liga)…`
-    )
-    fixturesData = await provider.listFixtures({ leagueId: config.leagueId })
-    // Collect unique season ids from fixtures
-    const seasonSet = new Set<string>()
-    for (const f of fixturesData) {
-      if (f.seasonId) seasonSet.add(String(f.seasonId))
-    }
-    fetchedSeasonIds = [...seasonSet]
-    console.log(`  → ${fixturesData.length} fixtures`)
-  } else {
-    console.log(
-      `Fetching fixtures for league ${config.leagueId} (${config.dateFrom} … ${config.dateTo})…`
-    )
-    fixturesData = await provider.listFixtures({
-      leagueId: config.leagueId,
-      dateFrom: config.dateFrom,
-      dateTo: config.dateTo,
-    })
-    const seasonSet = new Set<string>()
-    for (const f of fixturesData) {
-      if (f.seasonId) seasonSet.add(String(f.seasonId))
-    }
-    fetchedSeasonIds = [...seasonSet]
-  }
+  console.log(`Fetching fixtures for season ${config.seasonId} (league ${config.leagueId})…`)
+  fixturesData = await provider.listFixtures({ seasonId: config.seasonId })
+  fetchedSeasonIds = [config.seasonId]
 
-  const leagueIdForRoster =
-    config.kind === 'daterange' || config.kind === 'league'
-      ? config.leagueId
-      : process.env.BZZOIRO_LEAGUE_ID?.trim() || fixturesData.find((f) => f.leagueId)?.leagueId || ''
+  const leagueIdForRoster = config.leagueId
 
   let rosterFull: Awaited<ReturnType<typeof provider.listTeams>> = []
   if (leagueIdForRoster) {
@@ -154,38 +52,7 @@ async function seed() {
   }
 
   if (fixturesData.length === 0) {
-    if (config.kind === 'season') {
-      console.warn('No fixtures returned for this season.')
-      const leagueFilter = process.env.BZZOIRO_LEAGUE_ID?.trim()
-      const seasons = await provider.listSeasons(leagueFilter ? { leagueId: leagueFilter } : {})
-      const found = seasons.find((s) => s.id === config.seasonId)
-      if (found) {
-        console.warn(
-          `Season ${config.seasonId} exists (${found.name}). If there are still no events, the dataset may be empty for that season on your plan, or use another TOURNAMENT_ID from GET /api/seasons/.`
-        )
-      } else {
-        const examples = seasons
-          .slice(0, 12)
-          .map((s) => `${s.id}=${s.name}`)
-          .join('; ')
-        console.warn(
-          `Season id "${config.seasonId}" not in /seasons/ results${leagueFilter ? ` for league ${leagueFilter}` : ''}. ` +
-            (examples ? `Sample seasons: ${examples}. ` : '') +
-            'Set TOURNAMENT_ID to the numeric `id` from https://sports.bzzoiro.com/api/seasons/ (optional: ?league=league_id).'
-        )
-      }
-    } else if (config.kind === 'seasons') {
-      console.warn(`No fixtures for any of seasons ${config.seasonIds.join(', ')}. Check ids under GET /v2/leagues/:id/seasons/.`)
-    } else if (config.kind === 'league') {
-      console.warn(
-        `No events returned for league ${config.leagueId}. Confirm BZZOIRO_LEAGUE_ID (GET /v2/leagues/) or try BZZOIRO_FIXTURE_SEASON_IDS with grupo + knockout ids.`
-      )
-    } else {
-      console.warn(
-        `No events for league ${config.leagueId} between ${config.dateFrom} and ${config.dateTo}. ` +
-          'Widen the date range, or confirm BZZOIRO_LEAGUE_ID (GET /v2/leagues/). You can also switch to TOURNAMENT_ID if /api/seasons/?league=ID lists a season for this competition.'
-      )
-    }
+    console.warn(`No events for season ${config.seasonId}. Check seasonId in tournaments.config.ts.`)
   }
 
   const fromFixtures = extractTeamsFromFixtures(fixturesData)
@@ -225,14 +92,14 @@ async function seed() {
 
   // Upsert the tournament record
   const leagueIdNum = Number.parseInt(leagueIdForRoster || '0', 10)
-  const seasonIdsCsv = fetchedSeasonIds.length > 0 ? fetchedSeasonIds.join(',') : '0'
-  console.log(`Upserting tournament "${tournamentName}"…`)
+  const seasonIdsCsv = fetchedSeasonIds.join(',')
+  console.log(`Upserting tournament "${tournamentCfg.name}"…`)
   const tournament = await upsertTournament({
-    name: tournamentName,
-    shortName: tournamentShortName,
+    name: tournamentCfg.name,
+    shortName: tournamentCfg.shortName,
     leagueId: leagueIdNum,
     seasonIds: seasonIdsCsv,
-    isDefault,
+    isDefault: tournamentCfg.isDefault,
   })
   console.log(`  → tournament id: ${tournament.id}`)
 
@@ -272,15 +139,29 @@ async function seed() {
         awayScore: fx.awayScore ?? null,
         tournamentId: tournament.id,
       })
-      .onConflictDoNothing()
+      .onConflictDoUpdate({
+        target: fixtures.id,
+        set: { tournamentId: tournament.id, status: statusToDb(fx.status), homeScore: fx.homeScore ?? null, awayScore: fx.awayScore ?? null },
+      })
   }
 
-  console.log('Seed complete.')
+  console.log(`Seed complete for "${tournamentCfg.name}".`)
 }
 
 async function main() {
+  const apiKey = normalizeBzzoiroApiKey(process.env.BZZOIRO_API_KEY ?? '')
+  if (!apiKey) throw new Error('Missing BZZOIRO_API_KEY — add it to backend/.env')
+  const tz = process.env.BSD_TIMEZONE ?? 'UTC'
+  const base = (process.env.BZZOIRO_BASE_URL ?? 'https://sports.bzzoiro.com/api').replace(/\/+$/, '')
+
+  console.log(`Bzzoiro: API token loaded (${apiKey.length} chars).`)
+  console.log(`Seeding ${TOURNAMENTS.length} tournament(s)…`)
+
   try {
-    await seed()
+    for (const t of TOURNAMENTS) {
+      await seedTournament(t, apiKey, base, tz)
+    }
+    console.log('\nAll tournaments seeded successfully.')
   } catch (err) {
     console.error(err)
     process.exitCode = 1

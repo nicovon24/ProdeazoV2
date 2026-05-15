@@ -53,6 +53,14 @@ export function deleteMember(leagueId: string, userId: string) {
     .returning()
 }
 
+export async function deleteLeague(leagueId: string) {
+  return db.transaction(async (tx) => {
+    await tx.delete(miniLeagueMembers).where(eq(miniLeagueMembers.leagueId, leagueId))
+    const [deleted] = await tx.delete(miniLeagues).where(eq(miniLeagues.id, leagueId)).returning()
+    return deleted
+  })
+}
+
 export function findLeagueLeaderboard(leagueId: string) {
   return db
     .select({
