@@ -1,6 +1,6 @@
 import { db } from '../db/client'
 import { tournaments } from '../db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 
 export async function findDefaultTournament() {
   const [t] = await db.select().from(tournaments).where(eq(tournaments.isDefault, true)).limit(1)
@@ -26,7 +26,7 @@ export async function upsertTournament(data: {
   const existing = await db
     .select()
     .from(tournaments)
-    .where(eq(tournaments.leagueId, data.leagueId))
+    .where(and(eq(tournaments.leagueId, data.leagueId), eq(tournaments.seasonIds, data.seasonIds)))
     .limit(1)
 
   if (existing.length > 0) {

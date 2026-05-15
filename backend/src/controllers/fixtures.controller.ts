@@ -116,7 +116,10 @@ export async function list(req: Request, res: Response) {
 export async function live(req: Request, res: Response) {
   const tournamentId = resolveTournamentQueryParam(req.query.tournamentId)
   const tournament = await resolveTournament(tournamentId)
-  const cacheKey = `live:${tournament?.id ?? 'default'}`
+  if (!tournament) {
+    return res.status(404).json(err('NOT_FOUND', 'Tournament not found'))
+  }
+  const cacheKey = `live:${tournament.id}`
   const cached = await getCache<unknown[]>(cacheKey)
   if (cached) return res.json(paginate(cached, req))
 

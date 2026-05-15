@@ -8,7 +8,7 @@ export interface Prediction {
 }
 
 export async function fetchPredictions(tournamentId?: string | null): Promise<Prediction[]> {
-  const params = tournamentId ? `?tournamentId=${tournamentId}` : ''
+  const params = tournamentId ? `?tournamentId=${encodeURIComponent(tournamentId)}` : ''
   const data = await apiFetch<{ results: Prediction[] } | Prediction[]>(`/api/predictions${params}`)
   return Array.isArray(data) ? data : data.results
 }

@@ -20,7 +20,7 @@ export interface Fixture {
 }
 
 export async function fetchFixtures(tournamentId?: string | null): Promise<Fixture[]> {
-  const params = tournamentId ? `?tournamentId=${tournamentId}` : ''
+  const params = tournamentId ? `?tournamentId=${encodeURIComponent(tournamentId)}` : ''
   const data = await apiFetch<{ results: Fixture[] } | Fixture[]>(`/api/fixtures${params}`)
   return Array.isArray(data) ? data : data.results
 }
