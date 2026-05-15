@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { FormEvent, useEffect, useState } from 'react'
 import { Eye, EyeOff, Mail } from 'lucide-react'
 import { AuthInput, ErrorList, GoogleIcon } from '../../../components/AuthControls'
@@ -23,15 +23,26 @@ function getLoginErrorMessage(error: unknown) {
 
 export default function Login() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, loading, login } = useAuth()
+  const hasInviteRedirect = searchParams.get('redirect')?.startsWith('/join') ?? false
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
+  function getPostLoginRedirect(): string {
+    const params = new URLSearchParams(window.location.search)
+    const redirectParam = params.get('redirect')
+    if (redirectParam) return redirectParam
+    const pendingToken = sessionStorage.getItem('pendingInviteToken')
+    if (pendingToken) return `/join?token=${pendingToken}`
+    return '/home'
+  }
+
   useEffect(() => {
-    if (!loading && user) router.replace('/home')
+    if (!loading && user) router.replace(getPostLoginRedirect())
   }, [loading, router, user])
 
 
@@ -51,7 +62,7 @@ export default function Login() {
     setSubmitting(true)
     try {
       await login(email.trim(), password)
-      router.replace('/home')
+      router.replace(getPostLoginRedirect())
     } catch (err) {
 
       setErrors([getLoginErrorMessage(err)])
@@ -67,7 +78,7 @@ export default function Login() {
   return (
     <AuthShell
       title="Bienvenido de vuelta"
-      description="Iniciá sesión para ver tu Prodeazo."
+      description={hasInviteRedirect ? "Iniciá sesión para unirte a la liga." : "Iniciá sesión para ver tu Prodeazo."}
       footer={
         <>
           ¿No tenés cuenta?{' '}

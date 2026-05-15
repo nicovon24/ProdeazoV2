@@ -329,11 +329,17 @@ export default function FixturePage() {
                     </div>
                     <div className={styles.teamsCol}>
                       <div className={`${styles.team} ${styles.teamRight}`}>
-                        <span className={styles.teamName}>{f.homeTeam?.name ?? '?'}</span>
+                        <span className={styles.teamName}>{f.homeTeam?.shortName ?? f.homeTeam?.name ?? '?'}</span>
+                        {f.homeTeam?.logoUrl
+                          ? <img src={f.homeTeam.logoUrl} alt={f.homeTeam.name} className={styles.teamLogo} />
+                          : <div className={styles.teamLogoPlaceholder} />}
                       </div>
                       <span className={styles.vsSpan}>VS</span>
                       <div className={`${styles.team} ${styles.teamLeft}`}>
-                        <span className={styles.teamName}>{f.awayTeam?.name ?? '?'}</span>
+                        {f.awayTeam?.logoUrl
+                          ? <img src={f.awayTeam.logoUrl} alt={f.awayTeam.name} className={styles.teamLogo} />
+                          : <div className={styles.teamLogoPlaceholder} />}
+                        <span className={styles.teamName}>{f.awayTeam?.shortName ?? f.awayTeam?.name ?? '?'}</span>
                       </div>
                     </div>
                     {renderScoreStatus(f)}

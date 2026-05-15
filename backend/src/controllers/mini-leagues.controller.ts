@@ -109,6 +109,45 @@ export async function deleteLeague(req: Request, res: Response) {
   res.json({ ok: true })
 }
 
+export async function generateInvite(req: Request, res: Response) {
+  const userId = (req.user as any).id
+  const id = p(req.params.id)
+
+  const [league] = await miniLeagueModel.findLeagueById(id)
+  if (!league) return res.status(404).json(err('NOT_FOUND', 'League not found'))
+
+  const [membership] = await miniLeagueModel.findMember(id, userId)
+  if (!membership || membership.role !== 'owner') {
+    return res.status(403).json(err('FORBIDDEN', 'Only the owner can generate invite links'))
+  }
+
+  const [updated] = await miniLeagueModel.generateInviteToken(id)
+  res.json({ token: updated.inviteToken, expiresAt: updated.inviteExpiresAt })
+}
+
+export async function getInviteInfo(req: Request, res: Response) {
+  const token = String(req.params.token ?? '')
+  const [league] = await miniLeagueModel.findLeagueByToken(token)
+  if (!league) return res.status(404).json(err('NOT_FOUND', 'Invite link not found or expired'))
+  res.json({ id: league.id, name: league.name, expiresAt: league.inviteExpiresAt })
+}
+
+export async function joinByToken(req: Request, res: Response) {
+  const userId = (req.user as any).id
+  const token = String(req.body?.token ?? '')
+
+  if (!token) return res.status(400).json(err('VALIDATION_ERROR', 'token is required'))
+
+  const [league] = await miniLeagueModel.findLeagueByToken(token)
+  if (!league) return res.status(404).json(err('NOT_FOUND', 'Invite link not found or expired'))
+
+  const [existing] = await miniLeagueModel.findMember(league.id, userId)
+  if (existing) return res.status(409).json(err('CONFLICT', 'Already a member'))
+
+  const [member] = await miniLeagueModel.insertMember(league.id, userId, 'member')
+  res.status(201).json({ league: { id: league.id, name: league.name }, member })
+}
+
 export async function leaderboard(req: Request, res: Response) {
   const userId = (req.user as any).id
   const id = p(req.params.id)

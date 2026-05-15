@@ -15,6 +15,8 @@ export const miniLeagues = pgTable('mini_leagues', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
   name: text('name').notNull(),
   inviteCode: text('invite_code').unique().notNull().$defaultFn(() => createId().slice(0, 8).toUpperCase()),
+  inviteToken: text('invite_token').unique(),
+  inviteExpiresAt: timestamp('invite_expires_at'),
   creatorId: text('creator_id').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   tournamentId: text('tournament_id').references(() => tournaments.id),
