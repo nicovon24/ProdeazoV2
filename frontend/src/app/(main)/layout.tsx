@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../hooks/useAuth";
 import { Sidebar } from "../../components/layout/Sidebar";
+import { TournamentInitializer } from "../../components/TournamentInitializer";
 
 export default function MainLayout({
   children,
@@ -39,6 +40,7 @@ export default function MainLayout({
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
+      <TournamentInitializer />
       <Sidebar />
       <div
         style={{

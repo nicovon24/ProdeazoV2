@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { useAuth } from "../../hooks/useAuth";
+import { useTournamentStore } from "../../store/useTournamentStore";
 import styles from "./Header.module.css";
 
 interface HeaderProps {
@@ -21,6 +22,7 @@ interface HeaderProps {
 
 export function Header({ title, subtitle }: HeaderProps) {
   const { user, logout } = useAuth();
+  const { tournaments, activeTournamentId, setActiveTournament } = useTournamentStore();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -60,6 +62,21 @@ export function Header({ title, subtitle }: HeaderProps) {
         <h1 className={styles.pageTitle}>{title}</h1>
         {subtitle && <p className={styles.pageSubtitle}>{subtitle}</p>}
       </div>
+
+      {/* Tournament selector */}
+      {tournaments.length > 1 && (
+        <select
+          className={styles.tournamentSelect}
+          value={activeTournamentId ?? ''}
+          onChange={(e) => setActiveTournament(e.target.value)}
+        >
+          {tournaments.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.shortName ?? t.name}
+            </option>
+          ))}
+        </select>
+      )}
 
       {/* Help button */}
       <button className={styles.iconButton} type="button" title="Ayuda">

@@ -199,3 +199,13 @@
   width: 18px;
   height: 18px;
 }
+
+.tournamentSelect {
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
